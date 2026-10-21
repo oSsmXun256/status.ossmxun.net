@@ -1,72 +1,85 @@
 {
   "version": 1,
-  "fetchedAt": "2026-10-21T19:15:55.338Z",
+  "fetchedAt": "2026-10-21T19:19:21.101Z",
   "fetchState": "ok",
   "services": [
     {
       "id": "website",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "www",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "vrc",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "app",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "short",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "dashboard",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "cdn",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "data",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "api",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "honoka",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "kanon",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "fs1",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     },
     {
       "id": "fs2",
       "state": "operational",
-      "uptime24h": null
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:19:21.101Z"
     }
   ],
   "incidents": []

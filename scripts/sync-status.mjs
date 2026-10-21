@@ -10,7 +10,7 @@ const previous = JSON.parse(await readFile(output, 'utf8'));
 const now = new Date().toISOString();
 
 export function publicMonitor(service, monitor) {
-  return { id: service.id, state: monitorState(monitor.status), uptime24h: null };
+  return { id: service.id, monitorId: monitor.id, state: monitorState(monitor.status), uptime24h: null };
 }
 
 export function mergeIncidents(old, services, monitors, fetchedAt) {
@@ -51,7 +51,7 @@ async function sync() {
     if (!monitor) continue;
     const result = publicMonitor(service, monitor);
     const cached = previous.services.find(item => item.id === service.id);
-    if (typeof cached?.uptime24h === 'number' && cached.uptimeUpdatedAt && Date.parse(now) - Date.parse(cached.uptimeUpdatedAt) < 86400000) {
+    if (cached?.monitorId === monitor.id && typeof cached?.uptime24h === 'number' && cached.uptimeUpdatedAt && Date.parse(now) - Date.parse(cached.uptimeUpdatedAt) < 86400000) {
       result.uptime24h = cached.uptime24h;
       result.uptimeUpdatedAt = cached.uptimeUpdatedAt;
     } else {

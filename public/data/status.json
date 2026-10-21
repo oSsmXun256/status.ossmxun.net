@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "fetchedAt": "2026-10-21T19:27:45.553Z",
+  "fetchedAt": "2026-10-21T19:42:48.022Z",
   "fetchState": "ok",
   "services": [
     {
@@ -58,6 +58,13 @@
       "state": "operational",
       "uptime24h": 100,
       "uptimeUpdatedAt": "2026-10-21T19:27:45.553Z"
+    },
+    {
+      "id": "notify",
+      "monitorId": 804370253,
+      "state": "unknown",
+      "uptime24h": 100,
+      "uptimeUpdatedAt": "2026-10-21T19:42:48.022Z"
     },
     {
       "id": "kanon",

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "ossmxun.net のサービス稼働状況",
   "private": true,
+  "engines": { "node": ">=24.19.0" },
   "scripts": {
     "dev": "astro dev --host 127.0.0.1",
     "build": "astro build",

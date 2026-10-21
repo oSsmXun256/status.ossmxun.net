@@ -1,12 +1,10 @@
 [
   {"id":"website","name":"Webサイト","host":"ossmxun.net","group":"Webサービス","monitorUrl":"https://ossmxun.net/"},
-  {"id":"www","name":"www リダイレクト","host":"www.ossmxun.net","group":"Webサービス","monitorUrl":"https://www.ossmxun.net/"},
   {"id":"vrc","name":"VRChat","host":"vrc.ossmxun.net","group":"Webサービス","monitorUrl":"https://vrc.ossmxun.net/"},
   {"id":"app","name":"アプリ","host":"app.ossmxun.net","group":"Webサービス","monitorUrl":"https://app.ossmxun.net/"},
-  {"id":"short","name":"短縮URL","host":"s.ossmxun.net","group":"Webサービス","monitorUrl":"https://s.ossmxun.net/"},
+  {"id":"short","name":"短縮URL","host":"xu.f5.si","group":"Webサービス","monitorUrl":"https://xu.f5.si/"},
   {"id":"dashboard","name":"ダッシュボード","host":"dashboard.ossmxun.net","group":"Webサービス","monitorUrl":"https://dashboard.ossmxun.net/"},
   {"id":"cdn","name":"CDN","host":"cdn.ossmxun.net","group":"Webサービス","monitorUrl":"https://cdn.ossmxun.net/lumaui/v2/manifest.json"},
-  {"id":"data","name":"data リダイレクト","host":"data.ossmxun.net","group":"Webサービス","monitorUrl":"https://data.ossmxun.net/lumaui/v2/manifest.json"},
   {"id":"api","name":"API","host":"api.ossmxun.net","group":"API","monitorUrl":"https://api.ossmxun.net/health"},
   {"id":"honoka","name":"Honoka API","host":"honoka-api.ossmxun.net","group":"API","monitorUrl":"https://honoka-api.ossmxun.net/health"},
   {"id":"notify","name":"Notify API","host":"notify-api.ossmxun.net","group":"API","monitorUrl":null},

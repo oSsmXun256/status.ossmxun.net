@@ -22,8 +22,8 @@ test('maintenance is explicit and never ends solely because ETA elapsed', () => 
   assert.equal(activeMaintenance([{ status: 'scheduled' }]).length, 0);
 });
 test('public output strips API credentials, URLs, contacts and headers', () => {
-  const result = publicMonitor({ id: 'website' }, { status: 'UP', apiKey: 'secret', httpPassword: 'secret', url: 'https://private.invalid', lastDayUptimes: { histogram: [{ uptime: 100 }, { uptime: 90 }] } });
-  assert.deepEqual(result, { id: 'website', state: 'operational', uptime24h: null });
+  const result = publicMonitor({ id: 'website' }, { id: 1, status: 'UP', apiKey: 'secret', httpPassword: 'secret', url: 'https://private.invalid' });
+  assert.deepEqual(result, { id: 'website', monitorId: 1, state: 'operational', uptime24h: null });
 });
 test('incident recovery and history survive missing recent provider logs', () => {
   const service = { id: 'website', monitorUrl: 'https://example.com/' };

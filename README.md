@@ -37,7 +37,7 @@ npm run build
 2. `src/data/services.json` の`monitorUrl`に同じURLを設定します。未設定は`null`とし、不明表示にします。
 3. ローカルで型チェックとビルドを実行し、`feature`へpush後、公開承認された変更を`main`へ反映します。
 
-CDNは実在する`/lumaui/v2/manifest.json`を監視し、配信の応答を確認します。ルートは404が正常な構成です。Notify APIは`/health`と`/status`が404のため、公開ヘルスチェックURLの確認が必要です。ダッシュボードは公開入口の可用性のみを監視します。短縮URLサービスは`https://xu.f5.si/`を監視します。wwwとdataは掲載対象から外し、既存監視を停止しています。
+CDNは実在する`/lumaui/v2/manifest.json`を監視し、配信の応答を確認します。ルートは404が正常な構成です。APIの分類は`api.ossmxun.net`だけです。Honoka・Notify・KanonはDiscord Botに分類し、それぞれの`/health`を監視します。Botの監視用ドメインはページに表示しません。ダッシュボードは公開入口の可用性のみを監視します。短縮URLサービスは`https://xu.f5.si/`を監視します。wwwとdataは掲載対象から外し、既存監視を停止しています。
 
 ## メンテナンス情報
 

@@ -1,14 +1,14 @@
 [
-  {"id":"website","name":"Webサイト","host":"ossmxun.net","group":"Webサービス","monitorUrl":"https://ossmxun.net/"},
-  {"id":"vrc","name":"VRChat","host":"vrc.ossmxun.net","group":"Webサービス","monitorUrl":"https://vrc.ossmxun.net/"},
-  {"id":"app","name":"アプリ","host":"app.ossmxun.net","group":"Webサービス","monitorUrl":"https://app.ossmxun.net/"},
+  {"id":"website","name":"ホームページ","host":"ossmxun.net","group":"Webサービス","monitorUrl":"https://ossmxun.net/"},
+  {"id":"vrc","name":"VRCホームページ","host":"vrc.ossmxun.net","group":"Webサービス","monitorUrl":"https://vrc.ossmxun.net/"},
+  {"id":"app","name":"アプリ一覧ページ","host":"app.ossmxun.net","group":"Webサービス","monitorUrl":"https://app.ossmxun.net/"},
   {"id":"short","name":"短縮URL","host":"xu.f5.si","group":"Webサービス","monitorUrl":"https://xu.f5.si/"},
   {"id":"dashboard","name":"ダッシュボード","host":"dashboard.ossmxun.net","group":"Webサービス","monitorUrl":"https://dashboard.ossmxun.net/"},
   {"id":"cdn","name":"CDN","host":"cdn.ossmxun.net","group":"Webサービス","monitorUrl":"https://cdn.ossmxun.net/lumaui/v2/manifest.json"},
   {"id":"api","name":"API","host":"api.ossmxun.net","group":"API","monitorUrl":"https://api.ossmxun.net/health"},
-  {"id":"honoka","name":"Honoka API","host":"honoka-api.ossmxun.net","group":"API","monitorUrl":"https://honoka-api.ossmxun.net/health"},
-  {"id":"notify","name":"Notify API","host":"notify-api.ossmxun.net","group":"API","monitorUrl":null},
-  {"id":"kanon","name":"Kanon API","host":"kanon-api.ossmxun.net","group":"API","monitorUrl":"https://kanon-api.ossmxun.net/health"},
+  {"id":"honoka","name":"Honoka","host":"honoka-api.ossmxun.net","group":"Discord Bot","monitorUrl":"https://honoka-api.ossmxun.net/health"},
+  {"id":"notify","name":"Notify","host":"notify-api.ossmxun.net","group":"Discord Bot","monitorUrl":"https://notify-api.ossmxun.net/health"},
+  {"id":"kanon","name":"Kanon","host":"kanon-api.ossmxun.net","group":"Discord Bot","monitorUrl":"https://kanon-api.ossmxun.net/health"},
   {"id":"fs1","name":"ファイルサーバー 1","host":"fs1.ossmxun.net","group":"ファイルサーバー","monitorUrl":"https://fs1.ossmxun.net/"},
   {"id":"fs2","name":"ファイルサーバー 2","host":"fs2.ossmxun.net","group":"ファイルサーバー","monitorUrl":"https://fs2.ossmxun.net/"}
 ]

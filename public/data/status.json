@@ -1,7 +1,73 @@
 {
   "version": 1,
-  "fetchedAt": null,
-  "fetchState": "unconfigured",
-  "services": [],
+  "fetchedAt": "2026-10-21T19:15:55.338Z",
+  "fetchState": "ok",
+  "services": [
+    {
+      "id": "website",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "www",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "vrc",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "app",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "short",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "dashboard",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "cdn",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "data",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "api",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "honoka",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "kanon",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "fs1",
+      "state": "operational",
+      "uptime24h": null
+    },
+    {
+      "id": "fs2",
+      "state": "operational",
+      "uptime24h": null
+    }
+  ],
   "incidents": []
 }

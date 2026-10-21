@@ -31,7 +31,7 @@ function render() {
   get('overall-label').textContent = titles[state];
   get('overall-detail').textContent = state === 'unknown' ? '未確認のサービスがあります。下の一覧をご確認ください。' : state === 'operational' ? '監視対象の応答を確認しています。' : '対象と現在の状況は下の一覧をご確認ください。';
   get('fetched-at').textContent = dateLabel(latest?.fetchedAt);
-  get('monitored-count').textContent = String(latest?.services.length ?? 0);
+  get('monitored-count').textContent = String(services.filter(service => latest?.services.some(item => item.id === service.id)).length);
   get('data-notice').textContent = failed ? '監視データの取得に失敗しました。状態を「不明」として表示しています。' : !maintenance ? 'メンテナンス情報を取得できません。' : !fresh ? '最新の監視データがありません。未設定、取得失敗、または更新の遅延が考えられます。' : '監視結果は1時間ごとに反映します。監視データ取得時刻をご確認ください。';
   const current = get('current-events');
   const history = get('history-events');

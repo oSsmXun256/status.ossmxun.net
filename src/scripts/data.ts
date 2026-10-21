@@ -1,5 +1,5 @@
 export type State = 'operational' | 'degraded' | 'down' | 'maintenance' | 'unknown';
-export interface ServiceResult { id: string; state: State; uptime24h: number | null; }
+export interface ServiceResult { id: string; state: State; uptime24h: number | null; uptimeUpdatedAt?: string; }
 export interface Incident { id: string; serviceId: string; startedAt: string; resolvedAt: string | null; }
 export interface StatusData { version: number; fetchedAt: string | null; fetchState: string; services: ServiceResult[]; incidents: Incident[]; }
 export interface Maintenance { id: string; title: string; serviceIds: string[]; reason: string; status: 'scheduled' | 'in_progress' | 'completed'; startsAt: string | null; endsAt: string | null; completedAt: string | null; }

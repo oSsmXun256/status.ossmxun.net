@@ -1,5 +1,6 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
+import { setTimeout as delay } from 'node:timers/promises';
 import { monitorState } from '../src/lib/status.mjs';
 
 const root = new URL('../', import.meta.url);
@@ -9,8 +10,7 @@ const previous = JSON.parse(await readFile(output, 'utf8'));
 const now = new Date().toISOString();
 
 export function publicMonitor(service, monitor) {
-  const values = (monitor.lastDayUptimes?.histogram ?? []).map(bucket => bucket.uptime).filter(value => typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 100);
-  return { id: service.id, state: monitorState(monitor.status), uptime24h: values.length ? Math.round(values.reduce((a, b) => a + b, 0) / values.length * 1000) / 1000 : null };
+  return { id: service.id, state: monitorState(monitor.status), uptime24h: null };
 }
 
 export function mergeIncidents(old, services, monitors, fetchedAt) {
@@ -44,11 +44,30 @@ async function sync() {
   if (!response.ok) throw new Error(`UptimeRobot returned HTTP ${response.status}`);
   const data = await response.json();
   if (!Array.isArray(data.data) || data.nextLink) throw new Error('Incomplete monitor response');
-  const services = config.flatMap(service => {
-    if (!service.monitorUrl) return [];
+  const services = [];
+  for (const service of config) {
+    if (!service.monitorUrl) continue;
     const monitor = data.data.find(item => item.url?.replace(/\/$/, '') === service.monitorUrl.replace(/\/$/, ''));
-    return monitor ? [publicMonitor(service, monitor)] : [];
-  });
+    if (!monitor) continue;
+    const result = publicMonitor(service, monitor);
+    const cached = previous.services.find(item => item.id === service.id);
+    if (typeof cached?.uptime24h === 'number' && cached.uptimeUpdatedAt && Date.parse(now) - Date.parse(cached.uptimeUpdatedAt) < 86400000) {
+      result.uptime24h = cached.uptime24h;
+      result.uptimeUpdatedAt = cached.uptimeUpdatedAt;
+    } else {
+      // Free API: 10 requests/minute. Space statistics requests, once per day.
+      await delay(6500);
+      const statsResponse = await fetch(`https://api.uptimerobot.com/v3/monitors/${monitor.id}/stats/uptime`, {
+        headers: { Authorization: `Bearer ${key}`, Accept: 'application/json' }, signal: AbortSignal.timeout(15000),
+      });
+      if (!statsResponse.ok) throw new Error(`Statistics HTTP ${statsResponse.status}`);
+      const stats = await statsResponse.json();
+      if (typeof stats.uptime !== 'number' || !Number.isFinite(stats.uptime) || stats.uptime < 0 || stats.uptime > 100) throw new Error('Invalid uptime statistics');
+      result.uptime24h = stats.uptime;
+      result.uptimeUpdatedAt = now;
+    }
+    services.push(result);
+  }
   // Only explicitly allowlisted service IDs, status, uptime and incident dates are public.
   const next = { version: 1, fetchedAt: now, fetchState: 'ok', services, incidents: mergeIncidents(previous.incidents, config, data.data, now) };
   await writeFile(output, `${JSON.stringify(next, null, 2)}\n`);

@@ -22,6 +22,7 @@ function render() {
     badge.textContent = labels[state];
     const uptime = result?.uptime24h;
     row.querySelector('[data-uptime]')!.textContent = fresh && typeof uptime === 'number' && Number.isFinite(uptime) && uptime >= 0 && uptime <= 100 ? `${uptime.toFixed(2)}%` : '—';
+    row.querySelector<HTMLElement>('[data-uptime]')!.title = `稼働率取得：${dateLabel(result?.uptimeUpdatedAt)}（1日1回更新）`;
     row.querySelector('[data-note]')!.textContent = !service.monitorUrl ? '監視用URLを確認中' : !result ? '監視データ未取得' : !fresh ? '最新の監視データを確認できません' : state === 'unknown' ? '未確認、または監視が停止しています' : '';
   }
   const state = maintenance ? overall(states) : (overall(states) === 'operational' ? 'unknown' : overall(states));

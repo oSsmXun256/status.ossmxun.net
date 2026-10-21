@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "fetchedAt": "2026-10-21T19:42:48.022Z",
+  "fetchedAt": "2026-10-21T22:23:50.222Z",
   "fetchState": "ok",
   "services": [
     {
@@ -62,7 +62,7 @@
     {
       "id": "notify",
       "monitorId": 804370253,
-      "state": "unknown",
+      "state": "operational",
       "uptime24h": 100,
       "uptimeUpdatedAt": "2026-10-21T19:42:48.022Z"
     },
@@ -88,5 +88,12 @@
       "uptimeUpdatedAt": "2026-10-21T19:27:45.553Z"
     }
   ],
-  "incidents": []
+  "incidents": [
+    {
+      "id": "notify:371382887605118779",
+      "serviceId": "notify",
+      "startedAt": "2026-10-21T19:43:00.365Z",
+      "resolvedAt": "2026-10-21T19:48:05.365Z"
+    }
+  ]
 }

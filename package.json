@@ -1,0 +1,33 @@
+{
+  "name": "status.ossmxun.net",
+  "version": "1.0.0",
+  "description": "ossmxun.net のサービス稼働状況",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev --host 127.0.0.1",
+    "build": "astro build",
+    "preview": "astro preview --host 127.0.0.1",
+    "check": "astro check",
+    "test": "node --test tests/*.test.mjs",
+    "sync": "node scripts/sync-status.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/oSsmXun256/status.ossmxun.net.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/oSsmXun256/status.ossmxun.net/issues"
+  },
+  "homepage": "https://github.com/oSsmXun256/status.ossmxun.net#readme",
+  "dependencies": {
+    "@astrojs/check": "^0.9.12",
+    "@tailwindcss/vite": "^4.3.3",
+    "astro": "^7.4.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3"
+  }
+}

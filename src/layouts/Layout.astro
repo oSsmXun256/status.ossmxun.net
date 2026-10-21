@@ -1,0 +1,45 @@
+---
+import '../styles/global.css';
+interface Props { title: string; description: string; }
+const { title, description } = Astro.props;
+---
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <meta name="color-scheme" content="light dark" />
+    <title>{title} | ossmxun.net</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href={new URL(Astro.url.pathname, Astro.site)} />
+  </head>
+  <body>
+    <a class="skip" href="#main">本文へ移動</a>
+    <header class="site-header mx-auto flex items-center justify-between gap-4">
+      <a class="brand" href="/" aria-label="ossmxun.net 稼働状況トップ"><svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true"><path d="M3 26h12l5-15 9 27 6-17h10" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg><span>ossmxun.net<span class="brand-sub">サービス稼働状況</span></span></a>
+      <button id="theme" class="theme" type="button" aria-label="ダークモードに切り替える" aria-pressed="false">ダーク</button>
+    </header>
+    <main id="main" class="mx-auto"><slot /></main>
+    <footer class="site-footer mx-auto flex flex-wrap justify-between gap-4"><span>時刻は日本標準時（JST）</span><a href="https://ossmxun.net/">Webサイト</a></footer>
+    <script>
+      const button = document.querySelector<HTMLButtonElement>('#theme')!;
+      const media = matchMedia('(prefers-color-scheme: dark)');
+      let preference: string | null = null;
+      try { preference = localStorage.getItem('theme'); } catch { /* Storage can be disabled. */ }
+      function apply(dark: boolean) {
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        button.textContent = dark ? 'ライト' : 'ダーク';
+        button.setAttribute('aria-pressed', String(dark));
+        button.setAttribute('aria-label', `${dark ? 'ライト' : 'ダーク'}モードに切り替える`);
+      }
+      apply(preference ? preference === 'dark' : media.matches);
+      button.addEventListener('click', () => {
+        preference = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        try { localStorage.setItem('theme', preference); } catch { /* Keep session preference. */ }
+        apply(preference === 'dark');
+      });
+      media.addEventListener('change', () => { if (!preference) apply(media.matches); });
+    </script>
+  </body>
+</html>

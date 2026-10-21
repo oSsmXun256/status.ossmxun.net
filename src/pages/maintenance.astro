@@ -1,0 +1,7 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+<Layout title="メンテナンス案内" description="サービスのメンテナンス対象、理由、終了予定をご案内します。">
+  <section class="maintenance-page"><a class="back" href="/">稼働状況トップ</a><div class="maintenance-symbol" aria-hidden="true"><svg width="46" height="46" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 37 15-15m8-15a11 11 0 0 0-13 14L5 35a5 5 0 0 0 7 7l14-14A11 11 0 0 0 41 15l-8 8-8-8 7-8Z"/></svg></div><h1>メンテナンス案内</h1><p class="maintenance-intro">転送元のサービスはメンテナンス中です。</p><p class="muted">対象と作業内容をご確認ください。</p><div id="maintenance-events" class="events"><p class="empty">メンテナンス情報を確認しています。</p></div><noscript><p>メンテナンス情報の取得にはJavaScriptが必要です。<a href="/data/maintenance.json">保存済みの案内データ</a>も確認できます。</p></noscript><a class="primary-link" href="/">サービス全体の稼働状況を確認する</a><p class="maintenance-footnote">終了予定を過ぎても、作業が完了するまでメンテナンス中と表示します。</p></section>
+  <script>import '../scripts/maintenance.ts';</script>
+</Layout>

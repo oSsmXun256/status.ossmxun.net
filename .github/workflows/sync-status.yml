@@ -1,0 +1,35 @@
+name: Sync public monitoring data
+on:
+  schedule:
+    - cron: '17 * * * *'
+  workflow_dispatch:
+permissions:
+  contents: write
+concurrency:
+  group: monitoring-data
+  cancel-in-progress: false
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          ref: main
+      - name: Fetch allowlisted monitoring data
+        id: sync
+        continue-on-error: true
+        run: node scripts/sync-status.mjs
+        env:
+          UPTIMEROBOT_API_KEY: ${{ secrets.UPTIMEROBOT_API_KEY }}
+      - name: Publish static JSON without a Pages build
+        run: |
+          if git diff --quiet -- public/data/status.json; then exit 0; fi
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add public/data/status.json
+          git commit -m 'chore: sync public monitoring data [skip ci]'
+          git push origin HEAD:main
+      - name: Report API failure after publishing unknown state
+        if: steps.sync.outcome == 'failure'
+        run: exit 1

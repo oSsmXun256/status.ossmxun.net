@@ -32,7 +32,7 @@ function render() {
   for (const service of services) {
     const row = document.querySelector<HTMLElement>(`[data-service="${service.id}"]`)!;
     const result = latest?.services.find(item => item.id === service.id);
-    const state: State = fresh && result && result.state in labels ? result.state : 'unknown';
+    const state: State = !failed && result?.state === 'maintenance' ? 'maintenance' : fresh && result && result.state in labels ? result.state : 'unknown';
     const badge = row.querySelector<HTMLElement>('[data-badge]')!;
     badge.dataset.state = state;
     badge.textContent = labels[state];
@@ -44,7 +44,7 @@ function render() {
   for (const group of document.querySelectorAll<HTMLElement>('[data-group]')) {
     const members = services.filter(service => service.group === group.dataset.group);
     const results = members.map(service => latest?.services.find(item => item.id === service.id));
-    const state = fresh ? groupState(results.map(result => result?.state ?? 'unknown')) : 'unknown';
+    const state = fresh ? groupState(results.map(result => result?.state ?? 'unknown')) : !failed && results.some(result => result?.state === 'maintenance') ? 'maintenance' : 'unknown';
     const ratio = fresh ? meanUptime(results.map(result => result?.uptime24h)) : null;
     group.querySelector<HTMLElement>('[data-group-icon]')!.dataset.state = state;
     group.querySelector('[data-group-uptime]')!.textContent = formatUptime(ratio);
@@ -52,7 +52,7 @@ function render() {
     renderHistory(group.querySelector<HTMLElement>('[data-group-history]')!, fresh ? groupHistory(results) : []);
   }
 
-  const state: State = fresh && latest ? latest.state : 'unknown';
+  const state: State = fresh && latest ? latest.state : !failed && latest?.maintenance.state === 'in_progress' ? 'maintenance' : 'unknown';
   const overview = get('overall');
   overview.dataset.state = state;
   const titles = { operational: 'すべてのシステムは正常に稼働しています', degraded: '一部のサービスで障害が発生しています', down: 'サービスが停止しています', maintenance: 'メンテナンス中', unknown: '稼働状況は不明です' };
@@ -69,14 +69,14 @@ function render() {
   currentSection.hidden = true;
   historySection.hidden = true;
   get('history-link').hidden = true;
-  if (!fresh || !latest) return;
-  const active = latest.incidents.filter(item => !item.resolvedAt);
-  const ongoingMaintenance = latest.maintenance.items.filter(item => item.status === 'in_progress');
+  if (failed || !latest) return;
+  const active = fresh ? latest.incidents.filter(item => !item.resolvedAt) : [];
+  const ongoingMaintenance = latest.maintenance.items.filter(item => item.status !== 'completed');
   active.forEach(item => current.append(incidentCard(item)));
   ongoingMaintenance.forEach(item => current.append(maintenanceCard(item)));
   currentSection.hidden = !current.children.length;
   const past = [
-    ...latest.incidents.filter(item => item.resolvedAt).map(item => ({ at: item.startedAt, node: incidentCard(item) })),
+    ...(fresh ? latest.incidents.filter(item => item.resolvedAt).map(item => ({ at: item.startedAt, node: incidentCard(item) })) : []),
     ...latest.maintenance.items.filter(item => item.status === 'completed').map(item => ({ at: item.completedAt ?? item.startsAt ?? '', node: maintenanceCard(item) })),
   ].sort((a, b) => b.at.localeCompare(a.at));
   past.slice(0, 50).forEach(item => history.append(item.node));

@@ -1,8 +1,10 @@
 import Fastify from 'fastify';
-import { readFile } from 'node:fs/promises';
-import { activeMaintenance, overall, sanitizeIncidents, sanitizeMonitorResults, type IncidentRecord, type MaintenanceItem, type MonitorRecord, type State } from './status.js';
+import { activeMaintenance, effectiveMaintenance, overall, sanitizeIncidents, sanitizeMonitorResults, type IncidentRecord, type MaintenanceItem, type MonitorRecord, type State } from './status.js';
 import { services } from './services.js';
 import { uptimeRanges, sanitizeUptimeResults, type UptimeRange } from './uptime.js';
+import { accessVerifier } from './access.js';
+import { registerAdmin } from './admin.js';
+import { MaintenanceStore } from './maintenance.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '127.0.0.1';
@@ -12,6 +14,7 @@ const CACHE_TTL_MS = Math.max(60_000, Number(process.env.STATUS_CACHE_TTL_MS ?? 
 const MAX_AGE_MS = Math.max(CACHE_TTL_MS * 2, Number(process.env.STATUS_MAX_AGE_MS ?? 300_000));
 const MAINTENANCE_FILE = process.env.MAINTENANCE_FILE ?? '/var/lib/status-api/maintenance.json';
 const UPSTREAM = 'https://api.uptimerobot.com/v3';
+const maintenanceStore = new MaintenanceStore(MAINTENANCE_FILE);
 
 interface CacheSnapshot {
   fetchedAt: string;
@@ -29,7 +32,7 @@ const requestBuckets = new Map<string, { startedAt: number; count: number }>();
 const app = Fastify({
   logger: {
     level: process.env.LOG_LEVEL ?? 'info',
-    redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers.set-cookie'],
+    redact: ['req.headers.authorization', 'req.headers.cookie', 'req.headers["cf-access-jwt-assertion"]', 'res.headers["set-cookie"]'],
   },
   trustProxy: 'loopback',
   bodyLimit: 16 * 1024,
@@ -136,35 +139,20 @@ async function refreshIfExpired() {
   await refreshPromise;
 }
 
-async function loadMaintenance(): Promise<MaintenanceItem[]> {
+async function loadMaintenance(): Promise<MaintenanceItem[] | null> {
   try {
-    const raw = JSON.parse(await readFile(MAINTENANCE_FILE, 'utf8')) as { version?: unknown; maintenance?: unknown };
-    if (raw.version !== 1 || !Array.isArray(raw.maintenance)) return [];
-    return raw.maintenance.filter((item): item is MaintenanceItem => isMaintenance(item));
-  } catch {
-    return [];
-  }
+    return effectiveMaintenance((await maintenanceStore.read()).items);
+  } catch { return null; }
 }
 
-function isMaintenance(item: unknown): item is MaintenanceItem {
-  if (!item || typeof item !== 'object') return false;
-  const value = item as Partial<MaintenanceItem>;
-  return typeof value.id === 'string' && typeof value.title === 'string' && Array.isArray(value.serviceIds) &&
-    value.serviceIds.every(id => services.some(service => service.id === id)) && typeof value.reason === 'string' &&
-    ['scheduled', 'in_progress', 'completed'].includes(value.status ?? '') &&
-    (value.startsAt === null || typeof value.startsAt === 'string') &&
-    (value.endsAt === null || typeof value.endsAt === 'string') &&
-    (value.completedAt === null || typeof value.completedAt === 'string');
-}
-
-function publicStatus(maintenance: MaintenanceItem[]) {
+function publicStatus(maintenance: MaintenanceItem[] | null) {
   const cacheAgeSeconds = snapshot ? Math.max(0, Math.floor((Date.now() - Date.parse(snapshot.fetchedAt)) / 1000)) : null;
   const stale = !snapshot || lastErrorAt !== null || cacheAgeSeconds! * 1000 > MAX_AGE_MS;
-  const active = activeMaintenance(maintenance);
+  const active = activeMaintenance(maintenance ?? []);
   const servicesOut = services.map(service => {
     const result = snapshot?.services.find(item => item.id === service.id);
     const metrics = snapshot?.uptime.find(item => item.id === service.id);
-    const state: State = stale ? 'unknown' : active.some(item => item.serviceIds.includes(service.id)) ? 'maintenance' : result?.state ?? 'unknown';
+    const state: State = active.some(item => item.serviceIds.includes(service.id)) ? 'maintenance' : stale || maintenance === null ? 'unknown' : result?.state ?? 'unknown';
     return { id: service.id, state, uptime24h: stale ? null : metrics?.uptime24h ?? result?.uptime24h ?? null,
       uptimeHistory: stale ? [] : metrics?.uptimeHistory ?? [], monitoringStateSince: result?.monitoringStateSince ?? null };
   });
@@ -174,7 +162,7 @@ function publicStatus(maintenance: MaintenanceItem[]) {
     state: totalState,
     services: servicesOut,
     incidents: snapshot?.incidents ?? [],
-    maintenance: { state: active.length ? 'in_progress' : 'none', items: maintenance },
+    maintenance: { state: active.length ? 'in_progress' : 'none', items: maintenance ?? [], available: maintenance !== null },
     freshness: { state: stale ? 'stale' : 'fresh', fetchedAt: snapshot?.fetchedAt ?? null, updatedAt: snapshot?.fetchedAt ?? null, ageSeconds: cacheAgeSeconds },
   };
 }
@@ -191,6 +179,14 @@ app.get('/health', async (_request, reply) => {
   const upstream = !API_KEY ? 'not_configured' : lastErrorAt ? 'error' : snapshot && age! * 1000 <= MAX_AGE_MS ? 'ok' : 'unknown';
   reply.header('cache-control', 'no-store');
   return { status: 'ok', uptimeSeconds: Math.floor(process.uptime()), uptimeRobot: { state: upstream, lastSuccessAt: snapshot?.fetchedAt ?? null, lastAttemptAt, ageSeconds: age } };
+});
+
+registerAdmin(app, {
+  store: maintenanceStore, origin: process.env.ADMIN_ORIGIN ?? 'https://status-api.ossmxun.net',
+  verify: accessVerifier({
+    issuer: process.env.ACCESS_ISSUER ?? '', audience: process.env.ACCESS_AUDIENCE ?? '',
+    allowedEmails: (process.env.ACCESS_ALLOWED_EMAILS ?? '').split(',').map(email => email.trim()).filter(Boolean),
+  }),
 });
 
 app.listen({ host: HOST, port: PORT }).catch(error => {

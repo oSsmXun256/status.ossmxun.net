@@ -5,7 +5,7 @@ const target = document.getElementById('maintenance-events')!;
 async function refresh() {
   try {
     const data = await loadStatus<StatusData>();
-    if (!Array.isArray(data.maintenance?.items)) throw new Error('maintenance_unavailable');
+    if (!Array.isArray(data.maintenance?.items) || data.maintenance.available === false) throw new Error('maintenance_unavailable');
     const active = data.maintenance.items.filter(item => item.status !== 'completed');
     target.replaceChildren(...active.map(maintenanceCard));
     if (!active.length) target.replaceChildren(element('p', '現在、公開されているメンテナンス情報はありません。', 'empty'));

@@ -87,7 +87,12 @@ function normalizeTime(value: string | number | null | undefined): string | null
 }
 
 export function activeMaintenance(items: MaintenanceItem[], now = Date.now()) {
-  return items.filter(item => item.status === 'in_progress' && (!item.startsAt || Date.parse(item.startsAt) <= now));
+  return effectiveMaintenance(items, now).filter(item => item.status === 'in_progress' && (!item.startsAt || Date.parse(item.startsAt) <= now));
+}
+
+export function effectiveMaintenance(items: MaintenanceItem[], now = Date.now()): MaintenanceItem[] {
+  return items.map(item => item.status === 'scheduled' && item.startsAt && Date.parse(item.startsAt) <= now
+    ? { ...item, status: 'in_progress' } : item);
 }
 
 export interface MaintenanceItem {

@@ -8,7 +8,7 @@ export interface StatusData {
   state: State;
   services: ServiceResult[];
   incidents: Incident[];
-  maintenance: { state: 'none' | 'in_progress'; items: Maintenance[] };
+  maintenance: { state: 'none' | 'in_progress'; items: Maintenance[]; available?: boolean };
   freshness: { state: 'fresh' | 'stale'; fetchedAt: string | null; updatedAt: string | null; ageSeconds: number | null };
 }
 

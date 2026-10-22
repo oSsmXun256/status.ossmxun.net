@@ -27,7 +27,7 @@ npm --prefix status-api test
 
 - `GET /api/status` — 公開用サービス状態、障害履歴、メンテナンス、データ鮮度。
 - `GET /health` — APIプロセスとUptimeRobot接続状態。外部監視の失敗はプロセス状態と別に返します。
-- CORSは`https://status.ossmxun.net`だけを許可します。公開GET APIのみを設け、管理APIはありません。
+- 公開APIのCORSは`https://status.ossmxun.net`だけを許可します。管理APIは同じオリジンの管理画面からのみ更新できます。
 - APIは`127.0.0.1:3000`にbindし、Cloudflare Tunnelだけから到達させます。
 
 ## OCIへの初回導入
@@ -53,3 +53,27 @@ v3の`lastDayUptimes.histogram`が空でも、公式v2の`custom_uptime_ratios=1
 ## 監視対象
 
 表示名、ホスト名、監視IDは`src/data/services.json`に定義します。監視先の追加・削除時はUptimeRobotとこの定義を合わせて変更してください。Discord Botの監視ホストはページに表示しません。
+
+## メンテナンス管理
+
+`https://status-api.ossmxun.net/admin/`から登録・編集・完了を操作します。Cloudflare Accessで`status-api.ossmxun.net/admin`と配下を保護し、許可した管理者だけがログインできます。公開の`/api/status`・`/health`やStatusページには認証を追加しません。
+
+APIでもAccess JWTの署名、issuer、アプリ固有のAUD、有効期限、種別、管理者メールを検証します。設定が不足している場合、管理画面は503で閉じます。設定は`/etc/status-api/access.env`に`root:root`・`0600`で保存します。
+
+```dotenv
+ACCESS_ISSUER=https://YOUR_TEAM.cloudflareaccess.com
+ACCESS_AUDIENCE=YOUR_APPLICATION_AUD
+ACCESS_ALLOWED_EMAILS=YOUR_ADMIN_EMAIL
+ADMIN_ORIGIN=https://status-api.ossmxun.net
+```
+
+- `GET /admin/api/maintenance` — 一覧・対象サービス・更新リビジョン。
+- `POST /admin/api/maintenance` — 新規登録。
+- `PATCH /admin/api/maintenance/:id` — 編集・完了。
+- 更新には同じOrigin、JSON、`X-Status-Admin: 1`、取得したリビジョンの`If-Match`が必要です。競合は409として拒否し、一覧を再読み込みしてから保存します。
+
+開始日時・終了予定は日本時間で入力します。予定は開始日時に実施中となり、終了予定だけでは完了になりません。「完了にする」で終了してください。過去の記録は履歴として残ります。監視障害と計画メンテナンスは別々に管理します。Redirect Rulesの切り替えはこの管理画面では行いません。
+
+保存先は`/var/lib/status-api/maintenance.json`で、同じディレクトリの一時ファイルから原子的に置き換えます。所有者はサービス実行ユーザー、ディレクトリは0750、ファイルは0640にします。systemdの`ReadWritePaths`はこのディレクトリだけに限定します。更新前にファイルをバックアップし、デプロイ時に空のサンプルで上書きしないでください。管理操作はsystemd journalに記録されます。
+
+APIの更新時は`status-api/dist`・`status-api/admin`・`package.json`・`package-lock.json`・`src/data/services.json`を配置し、APIディレクトリで`npm ci --omit=dev`を実行して`status-api`だけ再起動します。認証設定変更時も同サービスを再起動します。Tunnel・Nginx・他サービスの再起動は不要です。

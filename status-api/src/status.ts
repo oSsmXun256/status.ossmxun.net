@@ -5,6 +5,7 @@ export type State = 'operational' | 'degraded' | 'down' | 'maintenance' | 'unkno
 export interface MonitorRecord {
   id: number;
   status: unknown;
+  createDateTime?: string;
   lastDayUptimes?: { histogram?: Array<{ uptime?: number; timestamp?: number }> } | null;
   currentStateDuration?: number;
 }

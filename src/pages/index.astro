@@ -4,18 +4,25 @@ import services from '../data/services.json';
 const groups = [...new Set(services.map(service => service.group))];
 ---
 <Layout title="稼働状況" description="ossmxun.net のサービス稼働状況">
-  <section class="overview" aria-labelledby="page-title">
-    <h1 id="page-title">稼働状況</h1>
-    <div id="overall" class="overall" data-state="unknown" role="status" aria-live="polite"><span class="signal" aria-hidden="true"></span><p class="overall-label" id="overall-label">稼働状況は不明です</p></div>
-    <p class="summary">最終更新 <time id="last-updated">—</time></p>
-    <p class="notice" id="data-error" role="status" aria-live="polite"></p>
+  <section id="overall" class="overview" data-state="unknown" aria-labelledby="page-title">
+    <h1 id="page-title" class="sr-only">稼働状況</h1>
+    <div class="overall" role="status" aria-live="polite"><span class="state-icon" aria-hidden="true"></span><p class="overall-label" id="overall-label">稼働状況は不明です</p></div>
+    <div class="overview-meta"><p class="summary">最終更新 <time id="last-updated">—</time></p><p class="notice" id="data-error" role="status" aria-live="polite"></p></div>
     <noscript><p class="notice">現在、稼働情報を取得できません</p></noscript>
   </section>
   <section id="current-section" class="section" aria-labelledby="current-title" hidden><h2 id="current-title">現在の障害・メンテナンス</h2><div id="current-events" class="events"></div></section>
-  <section class="section" aria-labelledby="services-title"><h2 id="services-title">サービス別の状況</h2>
-    {groups.map(group => <div class="service-group"><h3>{group}</h3><ul class="services">{services.filter(service => service.group === group).map(service => <li class="service" data-service={service.id}><div class="service-name"><span>{service.name}</span>{group !== 'Discord Bot' && <a href={`https://${service.host}/`}>{service.host}</a>}</div><div class="service-data"><span class="uptime" data-uptime>—</span><span class="badge" data-state="unknown" data-badge>不明</span></div></li>)}</ul></div>)}
+  <section class="status-panel" aria-labelledby="services-title">
+    <div class="panel-heading"><h2 id="services-title">稼働状況</h2><span>稼働率（24時間）</span></div>
+    {groups.map(group => <details class="service-group" data-group={group}>
+      <summary>
+        <div class="group-top"><span class="group-name"><span class="state-icon" data-state="unknown" data-group-icon aria-hidden="true"></span>{group}<span class="group-count">{services.filter(service => service.group === group).length}サービス</span></span><span class="group-uptime" data-group-uptime title="各サービスの稼働率の平均">—</span><svg class="chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="m4 2 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" /></svg></div>
+        <div class="history-bars" data-group-history aria-hidden="true" hidden></div>
+      </summary>
+      <ul class="services">{services.filter(service => service.group === group).map(service => <li class="service" data-service={service.id}><div class="service-name"><span>{service.name}</span>{group !== 'Discord Bot' && <a href={`https://${service.host}/`}>{service.host}</a>}</div><div class="service-data"><span class="uptime" data-uptime>—</span><span class="badge" data-state="unknown" data-badge>不明</span></div><div class="history-bars" data-service-history role="img" hidden></div></li>)}</ul>
+    </details>)}
+    <div class="panel-footer"><span>過去30日</span><span class="history-legend"><span>正常</span><span>障害</span><span>記録不足</span></span><span>今日</span></div>
   </section>
+  <nav class="page-links" aria-label="関連情報"><a id="history-link" href="#history-section" hidden>障害履歴を見る</a><a href="/maintenance">メンテナンス案内</a></nav>
   <section id="history-section" class="section" aria-labelledby="history-title" hidden><h2 id="history-title">障害履歴</h2><div id="history-events" class="events"></div></section>
-  <p class="maintenance-link"><a href="/maintenance">メンテナンス案内</a></p>
   <script>import '../scripts/status.ts';</script>
 </Layout>

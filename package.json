@@ -1,6 +1,6 @@
 {
   "name": "status.ossmxun.net",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "ossmxun.net のサービス稼働状況",
   "private": true,
   "engines": {

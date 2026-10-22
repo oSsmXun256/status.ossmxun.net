@@ -2,6 +2,7 @@ import Fastify from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { activeMaintenance, overall, sanitizeIncidents, sanitizeMonitorResults, type IncidentRecord, type MaintenanceItem, type MonitorRecord, type State } from './status.js';
 import { services } from './services.js';
+import { uptimeRanges, sanitizeUptimeResults, type UptimeRange } from './uptime.js';
 
 const PORT = Number(process.env.PORT ?? 3000);
 const HOST = process.env.HOST ?? '127.0.0.1';
@@ -16,6 +17,7 @@ interface CacheSnapshot {
   fetchedAt: string;
   services: ReturnType<typeof sanitizeMonitorResults>;
   incidents: ReturnType<typeof sanitizeIncidents>;
+  uptime: ReturnType<typeof sanitizeUptimeResults>;
 }
 
 let snapshot: CacheSnapshot | null = null;
@@ -89,14 +91,35 @@ async function listAll(path: string): Promise<any[]> {
 async function refresh() {
   if (!API_KEY) throw new Error('not_configured');
   lastAttemptAt = new Date().toISOString();
-  const [monitors, incidents] = await Promise.all([listAll('/monitors'), listAll('/incidents')]);
+  const ranges = uptimeRanges();
+  const [monitors, incidents, uptime] = await Promise.all([
+    listAll('/monitors'), listAll('/incidents'), fetchUptime(ranges).catch(() => null),
+  ]);
   const fetchedAt = new Date().toISOString();
   snapshot = {
     fetchedAt,
     services: sanitizeMonitorResults(monitors as MonitorRecord[], Date.now()),
     incidents: sanitizeIncidents(incidents as IncidentRecord[]),
+    uptime: uptime ? sanitizeUptimeResults(uptime, monitors as MonitorRecord[], ranges) : [],
   };
   lastErrorAt = null;
+}
+
+async function fetchUptime(ranges: UptimeRange[]) {
+  // v3 currently returns empty lastDayUptimes. The documented v2 API returns all
+  // monitors' daily ratios in one request, within the Free plan's rate limit.
+  const body = new URLSearchParams({
+    api_key: API_KEY!, format: 'json', monitors: services.map(service => service.monitorId).join('-'),
+    custom_uptime_ratios: '1', custom_uptime_ranges: ranges.map(range => `${range.from}_${range.to}`).join('-'),
+  });
+  const response = await fetch('https://api.uptimerobot.com/v2/getMonitors', {
+    method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body,
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!response.ok) throw new Error('uptime_unavailable');
+  const result = await response.json() as { stat?: string; monitors?: unknown };
+  if (result.stat !== 'ok' || !Array.isArray(result.monitors)) throw new Error('invalid_uptime_data');
+  return result.monitors;
 }
 
 async function refreshIfExpired() {
@@ -140,8 +163,10 @@ function publicStatus(maintenance: MaintenanceItem[]) {
   const active = activeMaintenance(maintenance);
   const servicesOut = services.map(service => {
     const result = snapshot?.services.find(item => item.id === service.id);
+    const metrics = snapshot?.uptime.find(item => item.id === service.id);
     const state: State = stale ? 'unknown' : active.some(item => item.serviceIds.includes(service.id)) ? 'maintenance' : result?.state ?? 'unknown';
-    return { id: service.id, state, uptime24h: stale ? null : result?.uptime24h ?? null, monitoringStateSince: result?.monitoringStateSince ?? null };
+    return { id: service.id, state, uptime24h: stale ? null : metrics?.uptime24h ?? result?.uptime24h ?? null,
+      uptimeHistory: stale ? [] : metrics?.uptimeHistory ?? [], monitoringStateSince: result?.monitoringStateSince ?? null };
   });
   const totalState = overall(servicesOut.map(item => item.state));
   return {

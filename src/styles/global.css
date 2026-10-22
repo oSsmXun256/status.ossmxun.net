@@ -126,3 +126,5 @@ main, .site-header, .site-footer { width: min(700px, calc(100% - 40px)); }
   .panel-footer { padding: 10px 14px; }
   .history-legend { gap: 8px; }
 }
+
+.event details{margin-top:14px;font-size:12px}.event summary{cursor:pointer;color:var(--muted)}.incident-timeline{list-style:none;padding:0 0 0 14px;margin:16px 0 0;border-left:1px solid var(--line)}.incident-timeline li+li{margin-top:18px}.incident-timeline h4{font-size:12px;font-weight:500;margin:0}

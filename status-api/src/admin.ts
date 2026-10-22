@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyRequest } from 'fastify';
 import { readFile } from 'node:fs/promises';
 import { services } from './services.js';
 import { MaintenanceError, MaintenanceStore } from './maintenance.js';
+import { IncidentError } from './incidents.js';
 import type { AccessPrincipal } from './access.js';
 
 interface Options {
@@ -27,10 +28,10 @@ export function registerAdmin(app: FastifyInstance, options: Options) {
       }
     });
     admin.setErrorHandler((error, request, reply) => {
-      if (error instanceof MaintenanceError) return reply.code(error.statusCode).send({ message: error.message });
+      if (error instanceof MaintenanceError || error instanceof IncidentError) return reply.code(error.statusCode).send({ message: error.message });
       if (error && typeof error === 'object' && 'statusCode' in error && error.statusCode === 400) return reply.code(400).send({ message: '入力内容を確認してください。' });
-      request.log.error({ event: 'maintenance_operation_failed' });
-      return reply.code(503).send({ message: 'メンテナンス情報の読み書きに失敗しました。' });
+      request.log.error({ event: 'status_admin_operation_failed' });
+      return reply.code(503).send({ message: '情報の読み書きに失敗しました。' });
     });
     admin.get('', async (_request, reply) => reply.redirect('/admin/'));
     admin.get('/', { prefixTrailingSlash: 'slash' }, async (_request, reply) => reply.type('text/html; charset=utf-8').send(await readFile(new URL('../admin/index.html', import.meta.url))));
@@ -38,17 +39,19 @@ export function registerAdmin(app: FastifyInstance, options: Options) {
     admin.get('/app.js', async (_request, reply) => reply.type('text/javascript').send(await readFile(new URL('./admin-client.js', import.meta.url))));
     admin.get('/api/maintenance', async (request, reply) => {
       const state = await options.store.read();
-      return reply.header('etag', `"${state.revision}"`).send({ version: 1, revision: state.revision, maintenance: state.items,
+      return reply.header('etag', `"${state.revision}"`).send({ version: 1, revision: state.revision, maintenance: state.items, incidents: state.incidents,
         services: services.map(service => ({ id: service.id, name: service.name, group: service.group })), email: principals.get(request)!.email });
     });
-    async function save(request: FastifyRequest, reply: import('fastify').FastifyReply, id?: string) {
+    async function save(request: FastifyRequest, reply: import('fastify').FastifyReply, id?: string, kind: 'maintenance' | 'incident' = 'maintenance') {
       const match = request.headers['if-match'];
       if (typeof match !== 'string' || !/^"[a-f0-9]{64}"$/.test(match)) return reply.code(428).send({ message: '一覧を読み込んでから保存してください。' });
-      const result = await options.store.update(match.slice(1, -1), request.body, id);
-      request.log.info({ event: id ? 'maintenance_updated' : 'maintenance_created', maintenanceId: result.item.id, actor: principals.get(request)!.email });
-      return reply.code(id ? 200 : 201).header('etag', `"${result.revision}"`).send({ version: 1, revision: result.revision, maintenance: result.items });
+      const result = await (kind === 'incident' ? options.store.updateIncident(match.slice(1, -1), request.body, id) : options.store.update(match.slice(1, -1), request.body, id));
+      request.log.info({ event: `${kind}_${id ? 'updated' : 'created'}`, recordId: result.item.id, actor: principals.get(request)!.email });
+      return reply.code(id ? 200 : 201).header('etag', `"${result.revision}"`).send({ version: 1, revision: result.revision, maintenance: result.items, incidents: result.incidents });
     }
     admin.post('/api/maintenance', async (request, reply) => save(request, reply));
     admin.patch<{ Params: { id: string } }>('/api/maintenance/:id', async (request, reply) => save(request, reply, request.params.id));
+    admin.post('/api/incidents', async (request, reply) => save(request, reply, undefined, 'incident'));
+    admin.patch<{ Params: { id: string } }>('/api/incidents/:id', async (request, reply) => save(request, reply, request.params.id, 'incident'));
   }, { prefix: '/admin' });
 }

@@ -77,3 +77,19 @@ ADMIN_ORIGIN=https://status-api.ossmxun.net
 保存先は`/var/lib/status-api/maintenance.json`で、同じディレクトリの一時ファイルから原子的に置き換えます。所有者はサービス実行ユーザー、ディレクトリは0750、ファイルは0640にします。systemdの`ReadWritePaths`はこのディレクトリだけに限定します。更新前にファイルをバックアップし、デプロイ時に空のサンプルで上書きしないでください。管理操作はsystemd journalに記録されます。
 
 APIの更新時は`status-api/dist`・`status-api/admin`・`package.json`・`package-lock.json`・`src/data/services.json`を配置し、APIディレクトリで`npm ci --omit=dev`を実行して`status-api`だけ再起動します。認証設定変更時も同サービスを再起動します。Tunnel・Nginx・他サービスの再起動は不要です。
+
+
+## インシデント管理
+
+同じ`/admin/`の「インシデント登録」からタイトル・対象サービス・影響・状況を公開できます。状態は「調査中」「対応中」「経過観察中」「解決済み」です。登録済みインシデントの「更新を追加」で、状態・影響と追記を保存します。更新内容は必須で、過去の追記は上書きしません。解決後の再開も新しい更新として残します。
+
+- `POST /admin/api/incidents` — 新規登録。`title`、`serviceIds`、`impact`（`degraded` / `down`）、`status`、`message`。
+- `PATCH /admin/api/incidents/:id` — 状態・影響の変更と追記。`status`と`message`は必須、`impact`は省略時に維持します。
+- 状態値は`investigating`、`identified`、`monitoring`、`resolved`です。認証・Origin・リビジョンの検証はメンテナンス管理と共通です。
+- 公開APIの`managedIncidents`に手動の記録を返します。UptimeRobotの自動検知は既存の`incidents`に維持します。
+
+データは既存の`maintenance.json`内の独立した`incidents`配列に保存し、メンテナンスと共通の書き込みキュー・リビジョンで更新競合を防ぎます。既存ファイルに配列がない場合は空として読み込み、最初の保存時に追加します。各種記録は200件、各インシデントの追記は200件、ファイル全体は1 MBを上限とします。
+
+未解決のインシデントは現在の障害欄に、解決済みは障害履歴に表示し、更新履歴を展開できます。サービスの状態にも手動で指定した影響を反映します。解決しても監視が停止・不明なら正常には戻しません。稼働率はUptimeRobotの実測値のままで、手動記録から推計しません。ページは5分間隔、または再表示・再読み込み時に最新情報を取得します。公開の書き込みAPIや新しいAccessアプリ、Workers、定期デプロイは追加しません。
+
+ローカルでAPI接続先を変える場合だけ`PUBLIC_STATUS_API_ORIGIN`を指定できます。未指定の本番ビルドは`https://status-api.ossmxun.net`を使います。

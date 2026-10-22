@@ -1,4 +1,5 @@
 import Fastify from 'fastify';
+import { reportedState, type ManagedIncident } from './incidents.js';
 import { activeMaintenance, effectiveMaintenance, overall, sanitizeIncidents, sanitizeMonitorResults, type IncidentRecord, type MaintenanceItem, type MonitorRecord, type State } from './status.js';
 import { services } from './services.js';
 import { uptimeRanges, sanitizeUptimeResults, type UptimeRange } from './uptime.js';
@@ -139,20 +140,21 @@ async function refreshIfExpired() {
   await refreshPromise;
 }
 
-async function loadMaintenance(): Promise<MaintenanceItem[] | null> {
+async function loadRecords() {
   try {
-    return effectiveMaintenance((await maintenanceStore.read()).items);
+    return await maintenanceStore.read();
   } catch { return null; }
 }
 
-function publicStatus(maintenance: MaintenanceItem[] | null) {
+function publicStatus(maintenance: MaintenanceItem[] | null, incidents: ManagedIncident[] | null) {
   const cacheAgeSeconds = snapshot ? Math.max(0, Math.floor((Date.now() - Date.parse(snapshot.fetchedAt)) / 1000)) : null;
   const stale = !snapshot || lastErrorAt !== null || cacheAgeSeconds! * 1000 > MAX_AGE_MS;
   const active = activeMaintenance(maintenance ?? []);
   const servicesOut = services.map(service => {
     const result = snapshot?.services.find(item => item.id === service.id);
     const metrics = snapshot?.uptime.find(item => item.id === service.id);
-    const state: State = active.some(item => item.serviceIds.includes(service.id)) ? 'maintenance' : stale || maintenance === null ? 'unknown' : result?.state ?? 'unknown';
+    const base: State = active.some(item => item.serviceIds.includes(service.id)) ? 'maintenance' : stale || maintenance === null ? 'unknown' : result?.state ?? 'unknown';
+    const state = reportedState(base, incidents ?? [], service.id);
     return { id: service.id, state, uptime24h: stale ? null : metrics?.uptime24h ?? result?.uptime24h ?? null,
       uptimeHistory: stale ? [] : metrics?.uptimeHistory ?? [], monitoringStateSince: result?.monitoringStateSince ?? null };
   });
@@ -162,16 +164,17 @@ function publicStatus(maintenance: MaintenanceItem[] | null) {
     state: totalState,
     services: servicesOut,
     incidents: snapshot?.incidents ?? [],
+    managedIncidents: { available: incidents !== null, items: incidents ?? [] },
     maintenance: { state: active.length ? 'in_progress' : 'none', items: maintenance ?? [], available: maintenance !== null },
-    freshness: { state: stale ? 'stale' : 'fresh', fetchedAt: snapshot?.fetchedAt ?? null, updatedAt: snapshot?.fetchedAt ?? null, ageSeconds: cacheAgeSeconds },
+    freshness: { state: stale ? 'stale' : 'fresh', fetchedAt: snapshot?.fetchedAt ?? null, updatedAt: [snapshot?.fetchedAt, ...(incidents ?? []).map(item => item.updatedAt)].filter((value): value is string => Boolean(value)).sort().at(-1) ?? null, ageSeconds: cacheAgeSeconds },
   };
 }
 
 app.get('/api/status', async (_request, reply) => {
   await refreshIfExpired();
-  const maintenance = await loadMaintenance();
+  const records = await loadRecords();
   reply.header('cache-control', 'no-store');
-  return publicStatus(maintenance);
+  return publicStatus(records ? effectiveMaintenance(records.items) : null, records?.incidents ?? null);
 });
 
 app.get('/health', async (_request, reply) => {

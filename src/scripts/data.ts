@@ -1,3 +1,5 @@
+import type { ManagedIncident } from '../../status-api/src/incidents';
+export type { ManagedIncident } from '../../status-api/src/incidents';
 export type State = 'operational' | 'degraded' | 'down' | 'maintenance' | 'unknown';
 export interface UptimeDay { date: string; uptime: number | null; }
 export interface ServiceResult { id: string; state: State; uptime24h: number | null; uptimeHistory?: UptimeDay[]; monitoringStateSince: string | null; }
@@ -8,12 +10,13 @@ export interface StatusData {
   state: State;
   services: ServiceResult[];
   incidents: Incident[];
+  managedIncidents?: { available: boolean; items: ManagedIncident[] };
   maintenance: { state: 'none' | 'in_progress'; items: Maintenance[]; available?: boolean };
   freshness: { state: 'fresh' | 'stale'; fetchedAt: string | null; updatedAt: string | null; ageSeconds: number | null };
 }
 
 export async function loadStatus<T>(): Promise<T> {
-  const response = await fetch('https://status-api.ossmxun.net/api/status', {
+  const response = await fetch(new URL('/api/status', import.meta.env.PUBLIC_STATUS_API_ORIGIN ?? 'https://status-api.ossmxun.net'), {
     cache: 'no-store',
     signal: AbortSignal.timeout(10000),
   });

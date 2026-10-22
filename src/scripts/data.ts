@@ -1,16 +1,24 @@
 export type State = 'operational' | 'degraded' | 'down' | 'maintenance' | 'unknown';
-export interface ServiceResult { id: string; state: State; uptime24h: number | null; uptimeUpdatedAt?: string; }
+export interface ServiceResult { id: string; state: State; uptime24h: number | null; monitoringStateSince: string | null; }
 export interface Incident { id: string; serviceId: string; startedAt: string; resolvedAt: string | null; }
-export interface StatusData { version: number; fetchedAt: string | null; fetchState: string; services: ServiceResult[]; incidents: Incident[]; }
 export interface Maintenance { id: string; title: string; serviceIds: string[]; reason: string; status: 'scheduled' | 'in_progress' | 'completed'; startsAt: string | null; endsAt: string | null; completedAt: string | null; }
-export interface MaintenanceData { version: number; maintenance: Maintenance[]; }
-const base = 'https://raw.githubusercontent.com/oSsmXun256/status.ossmxun.net/main/public/data/';
+export interface StatusData {
+  version: number;
+  state: State;
+  services: ServiceResult[];
+  incidents: Incident[];
+  maintenance: { state: 'none' | 'in_progress'; items: Maintenance[] };
+  freshness: { state: 'fresh' | 'stale'; fetchedAt: string | null; updatedAt: string | null; ageSeconds: number | null };
+}
 
-export async function loadData<T>(file: string): Promise<T> {
-  const response = await fetch(`${base}${file}?t=${Math.floor(Date.now() / 300000)}`, { cache: 'no-store', signal: AbortSignal.timeout(15000) });
-  if (!response.ok) throw new Error('データを取得できません');
+export async function loadStatus<T>(): Promise<T> {
+  const response = await fetch('https://status-api.ossmxun.net/api/status', {
+    cache: 'no-store',
+    signal: AbortSignal.timeout(10000),
+  });
+  if (!response.ok) throw new Error('status_unavailable');
   const data = await response.json();
-  if (data.version !== 1) throw new Error('未対応のデータ形式です');
+  if (data.version !== 1) throw new Error('unsupported_status_version');
   return data as T;
 }
 

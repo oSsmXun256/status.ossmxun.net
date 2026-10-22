@@ -17,11 +17,11 @@ const { title, description } = Astro.props;
   <body>
     <a class="skip" href="#main">本文へ移動</a>
     <header class="site-header mx-auto flex items-center justify-between gap-4">
-      <a class="brand" href="/" aria-label="ossmxun.net 稼働状況トップ"><svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true"><path d="M3 26h12l5-15 9 27 6-17h10" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg><span>ossmxun.net<span class="brand-sub">サービス稼働状況</span></span></a>
+      <a class="brand" href="/" aria-label="ossmxun.net 稼働状況トップ"><svg width="30" height="30" viewBox="0 0 48 48" aria-hidden="true"><path d="M3 26h12l5-15 9 27 6-17h10" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"/></svg><span>ossmxun.net</span></a>
       <button id="theme" class="theme" type="button" aria-label="ダークモードに切り替える" aria-pressed="false">ダーク</button>
     </header>
     <main id="main" class="mx-auto"><slot /></main>
-    <footer class="site-footer mx-auto flex flex-wrap justify-between gap-4"><span>時刻は日本標準時（JST）</span><a href="https://ossmxun.net/">Webサイト</a></footer>
+    <footer class="site-footer mx-auto flex flex-wrap justify-between gap-4"><a href="https://ossmxun.net/">ホームページ</a></footer>
     <script>
       const button = document.querySelector<HTMLButtonElement>('#theme')!;
       const media = matchMedia('(prefers-color-scheme: dark)');

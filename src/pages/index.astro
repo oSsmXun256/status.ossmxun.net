@@ -3,19 +3,19 @@ import Layout from '../layouts/Layout.astro';
 import services from '../data/services.json';
 const groups = [...new Set(services.map(service => service.group))];
 ---
-<Layout title="サービス稼働状況" description="ossmxun.net のサービス稼働状況、障害情報、メンテナンス予定をお知らせします。">
+<Layout title="稼働状況" description="ossmxun.net のサービス稼働状況">
   <section class="overview" aria-labelledby="page-title">
-    <div class="overview-title"><h1 id="page-title">サービス稼働状況</h1><span class="source">UptimeRobot による外部監視</span></div>
-    <div id="overall" class="overall" data-state="unknown" role="status" aria-live="polite"><span class="signal" aria-hidden="true"></span><div><p class="overall-label" id="overall-label">稼働状況は不明です</p><p id="overall-detail">監視データを読み込んでいます。</p></div></div>
-    <div class="summary flex flex-wrap gap-x-8 gap-y-3"><p>監視データ取得 <time id="fetched-at">未取得</time></p><p><span id="monitored-count">0</span> / {services.length} サービスを監視</p></div>
-    <p class="notice" id="data-notice">データの読み込み後に状況を表示します。</p>
-    <noscript><p class="notice">現在の稼働状況を取得するにはJavaScriptを有効にしてください。稼働状況は不明です。</p></noscript>
+    <h1 id="page-title">稼働状況</h1>
+    <div id="overall" class="overall" data-state="unknown" role="status" aria-live="polite"><span class="signal" aria-hidden="true"></span><p class="overall-label" id="overall-label">稼働状況は不明です</p></div>
+    <p class="summary">最終更新 <time id="last-updated">—</time></p>
+    <p class="notice" id="data-error" role="status" aria-live="polite"></p>
+    <noscript><p class="notice">現在、稼働情報を取得できません</p></noscript>
   </section>
-  <section class="section" aria-labelledby="current-title"><div class="section-heading"><h2 id="current-title">現在の障害・メンテナンス</h2><a href="/maintenance">メンテナンス案内</a></div><div id="current-events" class="events"><p class="empty">確認中です。</p></div></section>
-  <section class="section" aria-labelledby="services-title"><div class="section-heading"><h2 id="services-title">サービス別の状況</h2><span class="muted">稼働率：直近24時間の取得分</span></div>
-    {groups.map(group => <div class="service-group"><h3>{group}</h3><ul class="services">{services.filter(service => service.group === group).map(service => <li class="service" data-service={service.id}><div class="service-name"><span>{service.name}</span>{group !== 'Discord Bot' && <a href={`https://${service.host}/`}>{service.host}</a>}</div><div class="service-data"><span class="uptime" data-uptime>—</span><span class="badge" data-state="unknown" data-badge>不明</span></div><p class="service-note" data-note>{service.monitorUrl ? '監視データ未取得' : '監視用URLを確認中'}</p></li>)}</ul></div>)}
-    <details class="legend"><summary>状態と監視範囲について</summary><p>正常：応答を確認。一部障害：障害の疑い、または一部サービスの停止。停止中：停止を確認。メンテナンス中：作業情報を掲載中。不明：未設定、監視停止、データ取得失敗、または3時間以上更新なし。</p><p>HTTP監視は設定したURLの応答を確認します。ログイン後の機能やサービス全体の動作を保証するものではありません。転送元は転送先まで追跡します。</p><p>監視は5分間隔、表示用データは1時間間隔で取得します。稼働率は直近24時間の統計を1日1回取得します。画面は5分ごとに再取得します。監視データ取得時刻は個々の監視実行時刻とは異なります。</p></details>
+  <section id="current-section" class="section" aria-labelledby="current-title" hidden><h2 id="current-title">現在の障害・メンテナンス</h2><div id="current-events" class="events"></div></section>
+  <section class="section" aria-labelledby="services-title"><h2 id="services-title">サービス別の状況</h2>
+    {groups.map(group => <div class="service-group"><h3>{group}</h3><ul class="services">{services.filter(service => service.group === group).map(service => <li class="service" data-service={service.id}><div class="service-name"><span>{service.name}</span>{group !== 'Discord Bot' && <a href={`https://${service.host}/`}>{service.host}</a>}</div><div class="service-data"><span class="uptime" data-uptime>—</span><span class="badge" data-state="unknown" data-badge>不明</span></div></li>)}</ul></div>)}
   </section>
-  <section class="section" aria-labelledby="history-title"><div class="section-heading"><h2 id="history-title">過去の障害・メンテナンス</h2></div><div id="history-events" class="events"><p class="empty">履歴を読み込んでいます。</p></div></section>
+  <section id="history-section" class="section" aria-labelledby="history-title" hidden><h2 id="history-title">障害履歴</h2><div id="history-events" class="events"></div></section>
+  <p class="maintenance-link"><a href="/maintenance">メンテナンス案内</a></p>
   <script>import '../scripts/status.ts';</script>
 </Layout>

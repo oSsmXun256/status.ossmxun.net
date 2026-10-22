@@ -1,0 +1,170 @@
+import Fastify from 'fastify';
+import { readFile } from 'node:fs/promises';
+import { activeMaintenance, overall, sanitizeIncidents, sanitizeMonitorResults, type IncidentRecord, type MaintenanceItem, type MonitorRecord, type State } from './status.js';
+import { services } from './services.js';
+
+const PORT = Number(process.env.PORT ?? 3000);
+const HOST = process.env.HOST ?? '127.0.0.1';
+const ORIGIN = process.env.STATUS_ORIGIN ?? 'https://status.ossmxun.net';
+const API_KEY = process.env.UPTIMEROBOT_API_KEY?.trim();
+const CACHE_TTL_MS = Math.max(60_000, Number(process.env.STATUS_CACHE_TTL_MS ?? 120_000));
+const MAX_AGE_MS = Math.max(CACHE_TTL_MS * 2, Number(process.env.STATUS_MAX_AGE_MS ?? 300_000));
+const MAINTENANCE_FILE = process.env.MAINTENANCE_FILE ?? '/var/lib/status-api/maintenance.json';
+const UPSTREAM = 'https://api.uptimerobot.com/v3';
+
+interface CacheSnapshot {
+  fetchedAt: string;
+  services: ReturnType<typeof sanitizeMonitorResults>;
+  incidents: ReturnType<typeof sanitizeIncidents>;
+}
+
+let snapshot: CacheSnapshot | null = null;
+let lastAttemptAt: string | null = null;
+let lastErrorAt: string | null = null;
+let refreshPromise: Promise<void> | null = null;
+const requestBuckets = new Map<string, { startedAt: number; count: number }>();
+
+const app = Fastify({
+  logger: {
+    level: process.env.LOG_LEVEL ?? 'info',
+    redact: ['req.headers.authorization', 'req.headers.cookie', 'res.headers.set-cookie'],
+  },
+  trustProxy: 'loopback',
+  bodyLimit: 16 * 1024,
+  requestTimeout: 10_000,
+});
+
+app.addHook('onRequest', async (request, reply) => {
+  const origin = request.headers.origin;
+  if (origin === ORIGIN) {
+    reply.header('access-control-allow-origin', ORIGIN).header('vary', 'Origin');
+  }
+  if (request.method === 'OPTIONS') {
+    if (origin !== ORIGIN) return reply.code(403).send();
+    return reply.header('access-control-allow-methods', 'GET, OPTIONS')
+      .header('access-control-allow-headers', 'content-type')
+      .header('access-control-max-age', '600')
+      .code(204).send();
+  }
+  const now = Date.now();
+  const key = request.ip;
+  let bucket = requestBuckets.get(key);
+  if (!bucket || now - bucket.startedAt >= 60_000) {
+    bucket = { startedAt: now, count: 0 };
+    requestBuckets.set(key, bucket);
+  }
+  bucket.count += 1;
+  if (requestBuckets.size > 5000) {
+    for (const [ip, value] of requestBuckets) if (now - value.startedAt >= 60_000) requestBuckets.delete(ip);
+  }
+  if (bucket.count > 60) return reply.code(429).send({ error: 'rate_limited' });
+});
+
+async function upstreamGet(url: URL): Promise<any> {
+  const response = await fetch(url, {
+    headers: { authorization: `Bearer ${API_KEY}`, accept: 'application/json' },
+    signal: AbortSignal.timeout(8_000),
+  });
+  if (!response.ok) throw new Error(`upstream_${response.status}`);
+  return response.json();
+}
+
+async function listAll(path: string): Promise<any[]> {
+  const first = new URL(`${UPSTREAM}${path}`);
+  if (path === '/monitors') first.searchParams.set('limit', '100');
+  const all: any[] = [];
+  let url: URL | null = first;
+  let pages = 0;
+  while (url && pages < 3) {
+    const response = await upstreamGet(url);
+    if (!Array.isArray(response.data)) throw new Error('invalid_upstream_data');
+    all.push(...response.data);
+    pages += 1;
+    const nextLink = typeof response.nextLink === 'string' ? new URL(response.nextLink, UPSTREAM) : null;
+    url = nextLink && nextLink.origin === new URL(UPSTREAM).origin ? nextLink : null;
+  }
+  return all;
+}
+
+async function refresh() {
+  if (!API_KEY) throw new Error('not_configured');
+  lastAttemptAt = new Date().toISOString();
+  const [monitors, incidents] = await Promise.all([listAll('/monitors'), listAll('/incidents')]);
+  const fetchedAt = new Date().toISOString();
+  snapshot = {
+    fetchedAt,
+    services: sanitizeMonitorResults(monitors as MonitorRecord[], Date.now()),
+    incidents: sanitizeIncidents(incidents as IncidentRecord[]),
+  };
+  lastErrorAt = null;
+}
+
+async function refreshIfExpired() {
+  const freshEnough = snapshot && Date.now() - Date.parse(snapshot.fetchedAt) < CACHE_TTL_MS && !lastErrorAt;
+  if (freshEnough) return;
+  if (lastErrorAt && lastAttemptAt && Date.now() - Date.parse(lastAttemptAt) < 30_000) return;
+  if (!refreshPromise) {
+    refreshPromise = refresh().catch(() => { lastErrorAt = new Date().toISOString(); }).finally(() => { refreshPromise = null; });
+  }
+  await refreshPromise;
+}
+
+async function loadMaintenance(): Promise<MaintenanceItem[]> {
+  try {
+    const raw = JSON.parse(await readFile(MAINTENANCE_FILE, 'utf8')) as { version?: unknown; maintenance?: unknown };
+    if (raw.version !== 1 || !Array.isArray(raw.maintenance)) return [];
+    return raw.maintenance.filter((item): item is MaintenanceItem => isMaintenance(item));
+  } catch {
+    return [];
+  }
+}
+
+function isMaintenance(item: unknown): item is MaintenanceItem {
+  if (!item || typeof item !== 'object') return false;
+  const value = item as Partial<MaintenanceItem>;
+  return typeof value.id === 'string' && typeof value.title === 'string' && Array.isArray(value.serviceIds) &&
+    value.serviceIds.every(id => services.some(service => service.id === id)) && typeof value.reason === 'string' &&
+    ['scheduled', 'in_progress', 'completed'].includes(value.status ?? '') &&
+    (value.startsAt === null || typeof value.startsAt === 'string') &&
+    (value.endsAt === null || typeof value.endsAt === 'string') &&
+    (value.completedAt === null || typeof value.completedAt === 'string');
+}
+
+function publicStatus(maintenance: MaintenanceItem[]) {
+  const cacheAgeSeconds = snapshot ? Math.max(0, Math.floor((Date.now() - Date.parse(snapshot.fetchedAt)) / 1000)) : null;
+  const stale = !snapshot || lastErrorAt !== null || cacheAgeSeconds! * 1000 > MAX_AGE_MS;
+  const active = activeMaintenance(maintenance);
+  const servicesOut = services.map(service => {
+    const result = snapshot?.services.find(item => item.id === service.id);
+    const state: State = stale ? 'unknown' : active.some(item => item.serviceIds.includes(service.id)) ? 'maintenance' : result?.state ?? 'unknown';
+    return { id: service.id, state, uptime24h: stale ? null : result?.uptime24h ?? null, monitoringStateSince: result?.monitoringStateSince ?? null };
+  });
+  const totalState = overall(servicesOut.map(item => item.state));
+  return {
+    version: 1,
+    state: totalState,
+    services: servicesOut,
+    incidents: snapshot?.incidents ?? [],
+    maintenance: { state: active.length ? 'in_progress' : 'none', items: maintenance },
+    freshness: { state: stale ? 'stale' : 'fresh', fetchedAt: snapshot?.fetchedAt ?? null, updatedAt: snapshot?.fetchedAt ?? null, ageSeconds: cacheAgeSeconds },
+  };
+}
+
+app.get('/api/status', async (_request, reply) => {
+  await refreshIfExpired();
+  const maintenance = await loadMaintenance();
+  reply.header('cache-control', 'no-store');
+  return publicStatus(maintenance);
+});
+
+app.get('/health', async (_request, reply) => {
+  const age = snapshot ? Math.max(0, Math.floor((Date.now() - Date.parse(snapshot.fetchedAt)) / 1000)) : null;
+  const upstream = !API_KEY ? 'not_configured' : lastErrorAt ? 'error' : snapshot && age! * 1000 <= MAX_AGE_MS ? 'ok' : 'unknown';
+  reply.header('cache-control', 'no-store');
+  return { status: 'ok', uptimeSeconds: Math.floor(process.uptime()), uptimeRobot: { state: upstream, lastSuccessAt: snapshot?.fetchedAt ?? null, lastAttemptAt, ageSeconds: age } };
+});
+
+app.listen({ host: HOST, port: PORT }).catch(error => {
+  app.log.error({ err: error }, 'Status API failed to start');
+  process.exitCode = 1;
+});

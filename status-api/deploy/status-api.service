@@ -1,0 +1,36 @@
+[Unit]
+Description=ossmxun Status API
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/opt/status.ossmxun.net/status-api
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+Environment=STATUS_ORIGIN=https://status.ossmxun.net
+Environment=STATUS_CACHE_TTL_MS=120000
+Environment=STATUS_MAX_AGE_MS=300000
+Environment=MAINTENANCE_FILE=/var/lib/status-api/maintenance.json
+EnvironmentFile=-/etc/status-api/status-api.env
+ExecStart=/usr/bin/node /opt/status.ossmxun.net/status-api/dist/server.js
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+LockPersonality=true
+RestrictSUIDSGID=true
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+CapabilityBoundingSet=
+UMask=0077
+
+[Install]
+WantedBy=multi-user.target

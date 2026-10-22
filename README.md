@@ -34,7 +34,9 @@ npm --prefix status-api test
 
 `status-api/deploy/status-api.service`をsystemdへ配置し、`status-api/deploy/maintenance.example.json`を`/var/lib/status-api/maintenance.json`へコピーします。環境変数は`/etc/status-api/status-api.env`に保存し、`root:root`・`0600`にします。`UPTIMEROBOT_API_KEY`にはUptimeRobotのRead-only keyを設定します。未設定時は状態を`unknown`で返します。
 
-APIをビルド後、systemdを起動します。Cloudflare Tunnelは既存のローカル管理Tunnelを再利用し、`status-api.ossmxun.net`を`http://127.0.0.1:3000`へ向けます。外部公開ポートは追加しません。
+APIをビルド後、systemdを起動します。Cloudflare Tunnelは既存のローカル管理Tunnelを再利用し、`status-api.ossmxun.net`を`http://127.0.0.1:3000`へ向けます。`status-api/deploy/add-tunnel-route.py`は既存経路を保持し、404 catch-allの前にルートを加えて検証し、元設定をバックアップします。外部公開ポートは追加しません。
+
+Cloudflare DNSにはTunnel向けのプロキシ済みCNAMEを設定します。ゾーン全体のキャッシュルールより後に、`https://status-api.ossmxun.net/*`をキャッシュ対象外にするルールを置きます。
 
 ## Pages
 

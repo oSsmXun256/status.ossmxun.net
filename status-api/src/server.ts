@@ -100,6 +100,10 @@ async function refresh() {
 }
 
 async function refreshIfExpired() {
+  if (!API_KEY) {
+    lastErrorAt ??= new Date().toISOString();
+    return;
+  }
   const freshEnough = snapshot && Date.now() - Date.parse(snapshot.fetchedAt) < CACHE_TTL_MS && !lastErrorAt;
   if (freshEnough) return;
   if (lastErrorAt && lastAttemptAt && Date.now() - Date.parse(lastAttemptAt) < 30_000) return;

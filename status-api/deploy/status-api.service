@@ -16,13 +16,13 @@ Environment=STATUS_CACHE_TTL_MS=120000
 Environment=STATUS_MAX_AGE_MS=300000
 Environment=MAINTENANCE_FILE=/var/lib/status-api/maintenance.json
 EnvironmentFile=-/etc/status-api/status-api.env
-ExecStart=/usr/bin/node /opt/status.ossmxun.net/status-api/dist/server.js
+ExecStart=/usr/local/bin/node /opt/status.ossmxun.net/status-api/dist/server.js
 Restart=on-failure
 RestartSec=3
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=read-only
 ProtectKernelTunables=true
 ProtectKernelModules=true
 ProtectControlGroups=true

@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import { reportedState, type ManagedIncident } from './incidents.js';
 import { activeMaintenance, effectiveMaintenance, overall, sanitizeIncidents, sanitizeMonitorResults, type IncidentRecord, type MaintenanceItem, type MonitorRecord, type State } from './status.js';
 import { services } from './services.js';
-import { uptimeRanges, sanitizeUptimeResults, type UptimeRange } from './uptime.js';
+import { uptimeRanges, sanitizeUptimeResults } from './uptime.js';
 import { accessVerifier } from './access.js';
 import { registerAdmin } from './admin.js';
 import { MaintenanceStore } from './maintenance.js';
@@ -97,7 +97,7 @@ async function refresh() {
   lastAttemptAt = new Date().toISOString();
   const ranges = uptimeRanges();
   const [monitors, incidents, uptime] = await Promise.all([
-    listAll('/monitors'), listAll('/incidents'), fetchUptime(ranges).catch(() => null),
+    listAll('/monitors'), listAll('/incidents'), fetchUptime().catch(() => null),
   ]);
   const fetchedAt = new Date().toISOString();
   snapshot = {
@@ -109,12 +109,12 @@ async function refresh() {
   lastErrorAt = null;
 }
 
-async function fetchUptime(ranges: UptimeRange[]) {
-  // v3 currently returns empty lastDayUptimes. The documented v2 API returns all
-  // monitors' daily ratios in one request, within the Free plan's rate limit.
+async function fetchUptime() {
+  // Read real UP/DOWN/PAUSE transitions in one bulk request. Provider ratios
+  // can collapse to the current state during an outage, corrupting past days.
   const body = new URLSearchParams({
     api_key: API_KEY!, format: 'json', monitors: services.map(service => service.monitorId).join('-'),
-    custom_uptime_ratios: '1', custom_uptime_ranges: ranges.map(range => `${range.from}_${range.to}`).join('-'),
+    logs: '1', logs_limit: '1000',
   });
   const response = await fetch('https://api.uptimerobot.com/v2/getMonitors', {
     method: 'POST', headers: { 'content-type': 'application/x-www-form-urlencoded' }, body,
@@ -155,7 +155,7 @@ function publicStatus(maintenance: MaintenanceItem[] | null, incidents: ManagedI
     const metrics = snapshot?.uptime.find(item => item.id === service.id);
     const base: State = active.some(item => item.serviceIds.includes(service.id)) ? 'maintenance' : stale || maintenance === null ? 'unknown' : result?.state ?? 'unknown';
     const state = reportedState(base, incidents ?? [], service.id);
-    return { id: service.id, state, uptime24h: stale ? null : metrics?.uptime24h ?? result?.uptime24h ?? null,
+    return { id: service.id, state, uptime24h: stale ? null : metrics?.uptime24h ?? null,
       uptimeHistory: stale ? [] : metrics?.uptimeHistory ?? [], monitoringStateSince: result?.monitoringStateSince ?? null };
   });
   const totalState = overall(servicesOut.map(item => item.state));

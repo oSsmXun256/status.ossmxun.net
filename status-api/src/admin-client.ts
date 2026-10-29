@@ -1,3 +1,4 @@
+import { incidentPage } from './admin-list.js';
 import type { ManagedIncident, IncidentStatus } from './incidents.js';
 interface Item { id: string; title: string; reason: string; serviceIds: string[]; status: 'scheduled' | 'in_progress' | 'completed'; startsAt: string | null; endsAt: string | null; completedAt: string | null }
 interface Service { id: string; name: string; group: string }
@@ -5,10 +6,12 @@ const form = document.querySelector<HTMLFormElement>('#editor')!;
 const fields = document.querySelector<HTMLFieldSetElement>('#fields')!;
 const message = document.querySelector<HTMLParagraphElement>('#message')!;
 let incidents: ManagedIncident[] = [];
+let incidentFilter: 'active' | 'resolved' = 'active';
+let incidentPageNumber = 1;
 let revision = '', items: Item[] = [], services: Service[] = [], editing: string | undefined, busy = false;
 const input = (name: string) => form.elements.namedItem(name) as HTMLInputElement;
 function notice(text: string, error = false) { message.textContent = text; message.classList.toggle('error', error); }
-function setBusy(value: boolean) { busy = value; fields.disabled = value || !revision; document.querySelector<HTMLFieldSetElement>('#incident-fields')!.disabled = value || !revision; document.querySelectorAll<HTMLFieldSetElement>('#incident-items fieldset').forEach(field => field.disabled = value); document.querySelector<HTMLButtonElement>('#reload')!.disabled = value; document.querySelectorAll<HTMLButtonElement>('#items button').forEach(button => button.disabled = value); }
+function setBusy(value: boolean) { busy = value; fields.disabled = value || !revision; document.querySelector<HTMLFieldSetElement>('#incident-fields')!.disabled = value || !revision; document.querySelectorAll<HTMLFieldSetElement>('#incident-items fieldset').forEach(field => field.disabled = value); document.querySelector<HTMLButtonElement>('#reload')!.disabled = value; document.querySelectorAll<HTMLButtonElement>('.incident-filters button, #incident-pages button').forEach(button => button.disabled = value || !revision || button.dataset.unavailable === 'true'); document.querySelectorAll<HTMLButtonElement>('#items button').forEach(button => button.disabled = value); }
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text?: string) { const node = document.createElement(tag); if (text) node.textContent = text; return node; }
 const dateText = (value: string | null) => value ? new Intl.DateTimeFormat('ja-JP', { timeZone: 'Asia/Tokyo', dateStyle: 'short', timeStyle: 'short' }).format(new Date(value)) : '未設定';
 const localDate = (value: string | null) => value ? new Date(Date.parse(value) + 9 * 3600000).toISOString().slice(0, 16) : '';
@@ -32,30 +35,50 @@ function statusSelect(status: IncidentStatus) {
 }
 function renderIncidents() {
   const root = document.querySelector('#incident-items')!; root.replaceChildren();
-  if (!incidents.length) { root.append(element('p', '登録はありません')); return; }
-  for (const item of [...incidents].sort((a, b) => Number(a.status === 'resolved') - Number(b.status === 'resolved') || b.updatedAt.localeCompare(a.updatedAt))) {
+  const result = incidentPage(incidents, incidentFilter, incidentPageNumber);
+  incidentPageNumber = result.page;
+  for (const filter of ['active', 'resolved'] as const) {
+    const button = document.querySelector<HTMLButtonElement>(`#incident-${filter}`)!;
+    button.textContent = `${filter === 'active' ? '進行中' : '解決済み'}（${filter === 'active' ? result.activeCount : result.resolvedCount}）`;
+    button.setAttribute('aria-pressed', String(filter === incidentFilter));
+  }
+  const pages = document.querySelector('#incident-pages')!; pages.replaceChildren();
+  if (result.pages > 1) {
+    for (const [label, destination] of [['前へ', result.page - 1], ['次へ', result.page + 1]] as const) {
+      const button = element('button', label); button.type = 'button'; button.className = 'secondary'; button.disabled = destination < 1 || destination > result.pages;
+      button.dataset.unavailable = String(button.disabled);
+      button.addEventListener('click', () => { incidentPageNumber = destination; renderIncidents(); }); pages.append(button);
+      if (label === '前へ') pages.append(element('span', `${result.page} / ${result.pages}`));
+    }
+  }
+  if (!result.items.length) { root.append(element('p', incidentFilter === 'active' ? '進行中のインシデントはありません' : '解決済みのインシデントはありません')); return; }
+  for (const item of result.items) {
     const entry = element('article'); entry.className = 'entry'; const heading = element('h3', item.title);
     const badge = element('span', incidentLabels[item.status]); badge.className = 'badge'; heading.append(badge);
-    entry.append(heading, element('p', services.filter(service => item.serviceIds.includes(service.id)).map(service => service.name).join('・')));
+    const content = element('div');
+    if (item.status === 'resolved') { const details = element('details'), summary = element('summary'); summary.append(heading, element('time', dateText(item.resolvedAt))); details.append(summary, content); entry.append(details); }
+    else entry.append(heading, content);
+    content.append(element('p', services.filter(service => item.serviceIds.includes(service.id)).map(service => service.name).join('・')));
     const history = element('details'), summary = element('summary', `更新履歴（${item.updates.length}件）`); history.append(summary);
     for (const update of [...item.updates].reverse()) { const row = element('div'); row.className = 'incident-update'; row.append(element('p', `${dateText(update.createdAt)}　${incidentLabels[update.status]}`), element('p', update.message)); history.append(row); }
-    entry.append(element('p', item.updates.at(-1)!.message), history);
+    content.append(element('p', item.updates.at(-1)!.message), history);
     const updateForm = element('form'), fieldset = element('fieldset'), stateLabel = element('label', '状態');
     stateLabel.append(statusSelect(item.status)); const impactLabel = element('label', '影響'), impactSelect = element('select'); impactSelect.name = 'impact'; for (const [value, label] of [['degraded', '一部障害'], ['down', '停止']]) { const option = element('option', label); option.value = value; impactSelect.append(option); } impactSelect.value = item.impact; impactLabel.append(impactSelect); const textLabel = element('label', '追記'), text = element('textarea'); text.name = 'message'; text.rows = 3; text.required = true; text.maxLength = 4000; textLabel.append(text);
     const button = element('button', '更新を追加'); button.type = 'submit'; fieldset.append(stateLabel, impactLabel, textLabel, button); updateForm.append(fieldset);
     updateForm.setAttribute('aria-label', `${item.title}の更新`);
     updateForm.addEventListener('submit', event => { event.preventDefault(); const selected = updateForm.elements.namedItem('status') as HTMLSelectElement; void saveIncident({ status: selected.value, message: text.value, impact: impactSelect.value }, item.id); });
-    entry.append(updateForm); root.append(entry);
+    const actions = element('details'); actions.className = 'incident-actions'; actions.append(element('summary', item.status === 'resolved' ? '追記・再開' : '更新する'), updateForm); content.append(actions); root.append(entry);
   }
 }
 async function saveIncident(value: object, id?: string) {
-  if (busy) return; setBusy(true);
+  if (busy) return; setBusy(true); let saved = false;
   try {
     const data = await request('/admin/api/incidents' + (id ? '/' + encodeURIComponent(id) : ''), { method: id ? 'PATCH' : 'POST', headers: { 'content-type': 'application/json', 'x-status-admin': '1', 'if-match': `"${revision}"` }, body: JSON.stringify(value) });
-    revision = data.revision; items = data.maintenance; incidents = data.incidents; renderItems(); renderIncidents();
-    if (!id) incidentForm.reset(); notice('保存しました');
+    revision = data.revision; items = data.maintenance; incidents = data.incidents;
+    if (!id) { incidentFilter = (value as { status: string }).status === 'resolved' ? 'resolved' : 'active'; incidentPageNumber = 1; incidentForm.reset(); document.querySelector<HTMLDetailsElement>('#incident-create')!.open = false; }
+    renderItems(); renderIncidents(); notice('保存しました'); saved = true;
   } catch (error) { notice(error instanceof Error ? error.message : '保存に失敗しました。', true); }
-  finally { setBusy(false); }
+  finally { setBusy(false); if (saved) document.querySelector<HTMLButtonElement>(`#incident-${incidentFilter}`)!.focus({ preventScroll: true }); }
 }
 incidentForm.addEventListener('submit', event => {
   event.preventDefault(); const field = (name: string) => (incidentForm.elements.namedItem(name) as HTMLInputElement).value;
@@ -63,5 +86,6 @@ incidentForm.addEventListener('submit', event => {
   if (!serviceIds.length) { notice('対象サービスを選択してください。', true); return; }
   void saveIncident({ title: field('title'), serviceIds, impact: field('impact'), status: field('status'), message: field('message') });
 });
+for (const filter of ['active', 'resolved'] as const) document.querySelector(`#incident-${filter}`)!.addEventListener('click', () => { if (busy) return; incidentFilter = filter; incidentPageNumber = 1; renderIncidents(); });
 void load();
 export {};

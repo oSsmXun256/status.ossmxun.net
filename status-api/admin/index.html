@@ -2,11 +2,12 @@
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light dark"><title>Status管理</title><link rel="stylesheet" href="/admin/style.css"><script type="module" src="/admin/app.js"></script></head>
 <body><main><header><h1>Status管理</h1><a href="https://status.ossmxun.net">Statusページ</a></header><p id="account" class="muted"></p><p id="message" role="status" aria-live="polite">読み込み中…</p>
 <nav aria-label="管理項目"><a href="#incident-editor-title">インシデント</a><a href="#editor-title">メンテナンス</a></nav>
-<section aria-labelledby="incident-editor-title"><h2 id="incident-editor-title">インシデント登録</h2><form id="incident-editor"><fieldset id="incident-fields" disabled>
+<section aria-labelledby="incident-list-title"><h2 id="incident-list-title">インシデント一覧</h2><div class="incident-filters" role="group" aria-label="インシデントの表示"><button id="incident-active" type="button" class="secondary" aria-pressed="true">進行中</button><button id="incident-resolved" type="button" class="secondary" aria-pressed="false">解決済み</button></div><div id="incident-items"></div><nav id="incident-pages" aria-label="インシデントのページ"></nav></section>
+<section aria-labelledby="incident-editor-title"><details id="incident-create" class="registration"><summary><h2 id="incident-editor-title">インシデント登録</h2></summary><form id="incident-editor"><fieldset id="incident-fields" disabled>
 <label>タイトル<input name="title" required maxlength="120"></label><fieldset><legend>対象サービス</legend><div id="incident-services" class="services"></div></fieldset>
 <div class="columns"><label>影響<select name="impact"><option value="degraded">一部障害</option><option value="down">停止</option></select></label><label>状態<select name="status"><option value="investigating">調査中</option><option value="identified">対応中</option><option value="monitoring">経過観察中</option><option value="resolved">解決済み</option></select></label></div>
-<label>状況<textarea name="message" required maxlength="4000" rows="3"></textarea></label><button type="submit">インシデントを登録</button></fieldset></form></section>
-<section aria-labelledby="incident-list-title"><h2 id="incident-list-title">インシデント一覧</h2><div id="incident-items"></div></section>
+<label>状況<textarea name="message" required maxlength="4000" rows="3"></textarea></label><button type="submit">インシデントを登録</button></fieldset></form></details></section>
+
 <section aria-labelledby="editor-title"><h2 id="editor-title">メンテナンス登録</h2><form id="editor"><fieldset id="fields" disabled>
 <label>タイトル<input name="title" required maxlength="120"></label><fieldset><legend>対象サービス</legend><div id="services" class="services"></div></fieldset>
 <label>理由<textarea name="reason" required maxlength="2000" rows="3"></textarea></label><div class="columns"><label>状態<select name="status"><option value="scheduled">予定</option><option value="in_progress">実施中</option><option value="completed">完了</option></select></label><label>開始日時（日本時間）<input name="startsAt" type="datetime-local"></label><label>終了予定（日本時間）<input name="endsAt" type="datetime-local"></label></div>

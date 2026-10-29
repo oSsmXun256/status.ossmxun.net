@@ -36,6 +36,7 @@ export function registerAdmin(app: FastifyInstance, options: Options) {
     admin.get('', async (_request, reply) => reply.redirect('/admin/'));
     admin.get('/', { prefixTrailingSlash: 'slash' }, async (_request, reply) => reply.type('text/html; charset=utf-8').send(await readFile(new URL('../admin/index.html', import.meta.url))));
     admin.get('/style.css', async (_request, reply) => reply.type('text/css').send(await readFile(new URL('../admin/style.css', import.meta.url))));
+    admin.get('/admin-list.js', async (_request, reply) => reply.type('text/javascript').send(await readFile(new URL('./admin-list.js', import.meta.url))));
     admin.get('/app.js', async (_request, reply) => reply.type('text/javascript').send(await readFile(new URL('./admin-client.js', import.meta.url))));
     admin.get('/api/maintenance', async (request, reply) => {
       const state = await options.store.read();

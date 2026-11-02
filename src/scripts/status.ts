@@ -7,8 +7,10 @@ import { groupHistory, groupState, meanUptime, validUptime } from '../lib/metric
 const get = (id: string) => document.getElementById(id)!;
 let latest: StatusData | null = null;
 let failed = false;
+const period = document.querySelector<HTMLSelectElement>('#uptime-period')!;
+type Period = 'uptime24h' | 'uptime7d' | 'uptime30d';
 
-const formatUptime = (value: unknown) => validUptime(value) ? `${(value as number).toFixed(2)}%` : '—';
+const formatUptime = (value: unknown) => validUptime(value) ? `${((value as number) < 100 && (value as number) >= 99.995 ? 99.99 : value as number).toFixed(2)}%` : '—';
 
 function renderHistory(target: HTMLElement, points: UptimeDay[]) {
   target.replaceChildren();
@@ -28,6 +30,8 @@ function renderHistory(target: HTMLElement, points: UptimeDay[]) {
 }
 
 function render() {
+  const selected = period.value as Period;
+  const periodLabel = period.selectedOptions[0].textContent;
   const fresh = latest?.freshness.state === 'fresh' && !failed;
   const reports = !failed ? latest?.managedIncidents?.items ?? [] : [];
   const openReports = reports.filter(item => item.status !== 'resolved');
@@ -38,7 +42,7 @@ function render() {
     const badge = row.querySelector<HTMLElement>('[data-badge]')!;
     badge.dataset.state = state;
     badge.textContent = labels[state];
-    const uptime = result?.uptime24h;
+    const uptime = result?.[selected];
     row.querySelector('[data-uptime]')!.textContent = fresh ? formatUptime(uptime) : '—';
     renderHistory(row.querySelector<HTMLElement>('[data-service-history]')!, fresh ? result?.uptimeHistory ?? [] : []);
   }
@@ -47,10 +51,10 @@ function render() {
     const members = services.filter(service => service.group === group.dataset.group);
     const results = members.map(service => latest?.services.find(item => item.id === service.id));
     const state = fresh ? groupState(results.map(result => result?.state ?? 'unknown')) : !failed && results.some(result => result?.state === 'maintenance') ? 'maintenance' : openReports.some(item => members.some(member => item.serviceIds.includes(member.id))) ? 'degraded' : 'unknown';
-    const ratio = fresh ? meanUptime(results.map(result => result?.uptime24h)) : null;
+    const ratio = fresh ? meanUptime(results.map(result => result?.[selected])) : null;
     group.querySelector<HTMLElement>('[data-group-icon]')!.dataset.state = state;
     group.querySelector('[data-group-uptime]')!.textContent = formatUptime(ratio);
-    group.querySelector('summary')!.setAttribute('aria-label', `${group.dataset.group}、${labels[state as State]}、${members.length}サービス、24時間の平均稼働率 ${formatUptime(ratio)}`);
+    group.querySelector('summary')!.setAttribute('aria-label', `${group.dataset.group}、${labels[state as State]}、${members.length}サービス、${periodLabel}の平均稼働率 ${formatUptime(ratio)}`);
     renderHistory(group.querySelector<HTMLElement>('[data-group-history]')!, fresh ? groupHistory(results) : []);
   }
 
@@ -98,6 +102,7 @@ async function refresh() {
   render();
 }
 
+period.addEventListener('change', render);
 void refresh();
 setInterval(() => { if (!document.hidden) void refresh(); }, 300000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) void refresh(); });

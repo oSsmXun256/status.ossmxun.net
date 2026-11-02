@@ -156,7 +156,7 @@ function publicStatus(maintenance: MaintenanceItem[] | null, incidents: ManagedI
     const base: State = active.some(item => item.serviceIds.includes(service.id)) ? 'maintenance' : stale || maintenance === null ? 'unknown' : result?.state ?? 'unknown';
     const state = reportedState(base, incidents ?? [], service.id);
     return { id: service.id, state, uptime24h: stale ? null : metrics?.uptime24h ?? null,
-      uptimeHistory: stale ? [] : metrics?.uptimeHistory ?? [], monitoringStateSince: result?.monitoringStateSince ?? null };
+      uptime7d: stale ? null : metrics?.uptime7d ?? null, uptime30d: stale ? null : metrics?.uptime30d ?? null, uptimeHistory: stale ? [] : metrics?.uptimeHistory ?? [], monitoringStateSince: result?.monitoringStateSince ?? null };
   });
   const totalState = overall(servicesOut.map(item => item.state));
   return {

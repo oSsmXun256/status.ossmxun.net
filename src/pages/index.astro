@@ -12,7 +12,7 @@ const groups = [...new Set(services.map(service => service.group))];
   </section>
   <section id="current-section" class="section" aria-labelledby="current-title" hidden><h2 id="current-title">現在の障害・メンテナンス</h2><div id="current-events" class="events"></div></section>
   <section class="status-panel" aria-labelledby="services-title">
-    <div class="panel-heading"><h2 id="services-title">稼働状況</h2><span>稼働率（24時間）</span></div>
+    <div class="panel-heading"><h2 id="services-title">稼働状況</h2><label>稼働率 <select id="uptime-period" aria-label="稼働率の期間"><option value="uptime24h">過去24時間</option><option value="uptime7d">過去7日間</option><option value="uptime30d">過去30日間</option></select></label></div>
     {groups.map(group => <details class="service-group" data-group={group}>
       <summary>
         <div class="group-top"><span class="group-name"><span class="state-icon" data-state="unknown" data-group-icon aria-hidden="true"></span>{group}<span class="group-count">{services.filter(service => service.group === group).length}サービス</span></span><span class="group-uptime" data-group-uptime title="各サービスの稼働率の平均">—</span><svg class="chevron" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true"><path d="m4 2 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.4" /></svg></div>

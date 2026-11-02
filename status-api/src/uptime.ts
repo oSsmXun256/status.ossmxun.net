@@ -36,7 +36,8 @@ export function intervalUptime(logs: UptimeLog[], from: number, to: number, moni
   }
   if (cursor < to && state === 'unknown') return null;
   if (state === 'up') up += to - cursor;
-  return Math.round(up / (to - from) * 100_000) / 1000;
+  const rounded = Math.round(up / (to - from) * 100_000) / 1000;
+  return up < to - from && rounded === 100 ? 99.999 : rounded;
 }
 
 export function sanitizeUptimeResults(records: UptimeRecord[], monitors: MonitorRecord[], ranges: UptimeRange[], now = Date.now()) {
@@ -50,6 +51,6 @@ export function sanitizeUptimeResults(records: UptimeRecord[], monitors: Monitor
       if (!monitor || !['UP', 'DOWN', 'LOOKS_DOWN'].includes(String(monitor.status)) || !Array.isArray(record?.logs) || !Number.isFinite(created) || created > from || to > end) return null;
       return intervalUptime(record.logs, from, to, monitor, end);
     }
-    return { id: service.id, uptime24h: calculate(end - 86_400, end), uptimeHistory: ranges.map(range => ({ date: range.date, uptime: calculate(range.from, range.to) })) };
+    return { id: service.id, uptime24h: calculate(end - 86_400, end), uptime7d: calculate(end - 7 * 86_400, end), uptime30d: calculate(end - 30 * 86_400, end), uptimeHistory: ranges.map(range => ({ date: range.date, uptime: calculate(range.from, range.to) })) };
   });
 }

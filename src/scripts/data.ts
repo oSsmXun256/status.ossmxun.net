@@ -2,7 +2,7 @@ import type { ManagedIncident } from '../../status-api/src/incidents';
 export type { ManagedIncident } from '../../status-api/src/incidents';
 export type State = 'operational' | 'degraded' | 'down' | 'maintenance' | 'unknown';
 export interface UptimeDay { date: string; uptime: number | null; }
-export interface ServiceResult { id: string; state: State; uptime24h: number | null; uptimeHistory?: UptimeDay[]; monitoringStateSince: string | null; }
+export interface ServiceResult { id: string; state: State; uptime24h: number | null; uptime7d?: number | null; uptime30d?: number | null; uptimeHistory?: UptimeDay[]; monitoringStateSince: string | null; }
 export interface Incident { id: string; serviceId: string; startedAt: string; resolvedAt: string | null; }
 export interface Maintenance { id: string; title: string; serviceIds: string[]; reason: string; status: 'scheduled' | 'in_progress' | 'completed'; startsAt: string | null; endsAt: string | null; completedAt: string | null; }
 export interface StatusData {
